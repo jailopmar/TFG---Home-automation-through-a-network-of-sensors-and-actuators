@@ -11,17 +11,24 @@
 
 #define ledPin 6
 #define CHILD_ID 6
+
+#define ledPin2 7
+#define CHILD_ID2 7
 bool ledState = false;
+bool ledState2 = false;
 
 MyMessage msg(CHILD_ID, V_LIGHT);
+MyMessage msg2(CHILD_ID2, V_LIGHT);
 
 void setup()
 {
   pinMode(ledPin, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
 
   // Inicialización de MySensors
-  sendSketchInfo("Arduino LED", "1.0");
+  sendSketchInfo("TFG Jaime Lopez Marquez", "0.1");
   present(CHILD_ID, S_LIGHT);
+  present(CHILD_ID2, S_LIGHT);
 }
 
 void loop()
@@ -31,6 +38,12 @@ void loop()
   if (newState != ledState) {
     ledState = newState;
     send(msg.set(ledState));
+  }
+
+  bool newState2 = digitalRead(ledPin2);
+  if (newState2 != ledState2) {
+    ledState2 = newState2;
+    send(msg2.set(ledState2));
   }
 
   // Procesamiento de los mensajes recibidos
@@ -44,6 +57,17 @@ void receive(const MyMessage &message) {
   if (message.getSensor()==CHILD_ID && message.getType()== V_STATUS) {
      // Change relay state
     digitalWrite(ledPin, message.getBool()?HIGH:LOW);
+     // Store state in eeprom
+     Serial.print("Incoming change sensor:");
+     Serial.print(message.getSensor());
+     Serial.print(", New status: ");
+     Serial.println(message.getBool());
+     
+   } 
+
+   if (message.getSensor()==CHILD_ID2 && message.getType()== V_STATUS) {
+     // Change relay state
+    digitalWrite(ledPin2, message.getBool()?HIGH:LOW);
      // Store state in eeprom
      Serial.print("Incoming change sensor:");
      Serial.print(message.getSensor());
