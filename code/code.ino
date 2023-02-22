@@ -4,24 +4,42 @@
 #define MY_RADIO_RF24
 #define MY_RF24_CE_PIN 9
 #define MY_RF24_CS_PIN 10
-
 #define MY_RF24_CHANNEL 76
 #define MY_NODE_ID 95
-#include <MySensors.h>
+#define DHT_DATA_PIN 5
+#define DHTTYPE DHT11
 
+#include <MySensors.h>
+#include <DHT.h>
+
+static const uint64_t UPDATE_INTERVAL = 5000;
+static const uint8_t FORCE_UPDATE_N_READS = 10;
+
+#define SENSOR_TEMP_OFFSET 0
 #define ledPin 6
 #define CHILD_ID 6
-
 #define ledPin2 7
 #define CHILD_ID2 7
+#define CHILD_ID_HUM 0
+#define CHILD_ID_TEMP 1
+
+float lastTemp;
+float lastHum;
+uint8_t nNoUpdatesTemp;
+uint8_t nNoUpdatesHum;
 bool ledState = false;
 bool ledState2 = false;
 
 MyMessage msg(CHILD_ID, V_LIGHT);
 MyMessage msg2(CHILD_ID2, V_LIGHT);
+MyMessage msgHum(CHILD_ID_HUM, V_HUM);
+MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+
+DHT dht(DHT_DATA_PIN, DHTTYPE);
 
 void setup()
 {
+  dht.begin();
   pinMode(ledPin, OUTPUT);
   pinMode(ledPin2, OUTPUT);
 
@@ -29,10 +47,32 @@ void setup()
   sendSketchInfo("TFG Jaime Lopez Marquez", "0.1");
   present(CHILD_ID, S_LIGHT);
   present(CHILD_ID2, S_LIGHT);
+  present(CHILD_ID_HUM, S_HUM);
+  present(CHILD_ID_TEMP, S_TEMP);
 }
 
 void loop()
 {
+
+  if (millis() % 60000 == 0){
+    
+
+  dht.read(true);
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  Serial.println(F("Humedad: "));
+  Serial.println(humidity);
+
+  Serial.println("Temperatura: ");
+  Serial.println(temperature);
+
+  send(msgTemp.set(temperature, 1));
+  send(msgHum.set(humidity, 1));
+
+  }
+
+  
   // Comprobación del estado del LED
   bool newState = digitalRead(ledPin);
   if (newState != ledState) {
@@ -47,7 +87,6 @@ void loop()
   }
 
   // Procesamiento de los mensajes recibidos
-  
 }
 
 void receive(const MyMessage &message) {
