@@ -23,6 +23,15 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define CHILD_ID_HUM 0
 #define CHILD_ID_TEMP 1
 
+#define CHILD_ID3 2
+#define BUZZER_PIN 2
+
+#define CHILD_ID4 3
+#define BUTTON_PIN 3
+
+
+int oldValue = 0;
+int buzzerState = HIGH;
 float lastTemp;
 float lastHum;
 uint8_t nNoUpdatesTemp;
@@ -34,6 +43,8 @@ MyMessage msg(CHILD_ID, V_LIGHT);
 MyMessage msg2(CHILD_ID2, V_LIGHT);
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+MyMessage msgBuzzer(CHILD_ID3, V_STATUS);
+MyMessage msgButton(CHILD_ID4, V_STATUS);
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
 
@@ -42,6 +53,7 @@ void setup()
   dht.begin();
   pinMode(ledPin, OUTPUT);
   pinMode(ledPin2, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
   // Inicialización de MySensors
   sendSketchInfo("TFG Jaime Lopez Marquez", "0.1");
@@ -49,10 +61,24 @@ void setup()
   present(CHILD_ID2, S_LIGHT);
   present(CHILD_ID_HUM, S_HUM);
   present(CHILD_ID_TEMP, S_TEMP);
+  present(CHILD_ID3, S_BINARY);
+  present(CHILD_ID4, S_DOOR);
 }
 
 void loop()
 {
+
+  int value = digitalRead(BUTTON_PIN);
+
+  if (value != oldValue) {
+    send(msgButton.set(value == LOW ? 1 : 0));
+    send(msgBuzzer.set(value == LOW ? 1 : 0));
+    oldValue = value;
+    buzzerState = !buzzerState;
+    digitalWrite(BUZZER_PIN, buzzerState);
+    
+  }
+  
 
   if (millis() % 60000 == 0){
     
@@ -86,13 +112,21 @@ void loop()
     send(msg2.set(ledState2));
   }
 
+  
+
   // Procesamiento de los mensajes recibidos
 }
 
 void receive(const MyMessage &message) {
   // We only expect one type of message from controller. But we better check anyway.
 
+  if (message.getSensor()==CHILD_ID4 && message.type == V_STATUS) {
+    int value = message.getInt();
+    buzzerState = value == 1 ? HIGH : LOW;
+    digitalWrite(BUZZER_PIN, buzzerState);
+  }
 
+  
   if (message.getSensor()==CHILD_ID && message.getType()== V_STATUS) {
      // Change relay state
     digitalWrite(ledPin, message.getBool()?HIGH:LOW);
