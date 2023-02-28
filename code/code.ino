@@ -51,13 +51,16 @@ bool ledState2 = false;
 bool ledState3 = false;
 boolean buttonStateFromController = HIGH;
 
+bool buzzer_active = false;
+unsigned long buzzer_activation_time = 0;
+unsigned long buzzer_duration = 10000;
+
 MyMessage msg(CHILD_ID, V_LIGHT);
 MyMessage msg2(CHILD_ID2, V_LIGHT);
 MyMessage msg3(CHILD_ID5, V_LIGHT);
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgBuzzer(CHILD_ID3, V_STATUS);
-MyMessage msgInf(CHILD_ID4, V_STATUS);
 MyMessage msgBoton1(CHILD_ID31, V_STATUS);
 MyMessage msgBoton2(CHILD_ID33, V_STATUS);
 
@@ -81,7 +84,6 @@ void setup()
   present(CHILD_ID_HUM, S_HUM);
   present(CHILD_ID_TEMP, S_TEMP);
   present(CHILD_ID3, S_BINARY);
-  present(CHILD_ID4, S_DOOR);
   present(CHILD_ID31, S_DOOR);
   present(CHILD_ID33, S_DOOR);
 
@@ -122,20 +124,27 @@ void loop()
   }
   lastButtonState2 = buttonState2;
 
+  //----------------------------------------------------BUZZER---------------------------------------------------------------------------------
   
 
-  int value = digitalRead(INF_PIN);
-  //int valor = digitalRead(boton1);
-
-  if (value != oldValue) {
-    send(msgInf.set(value == LOW ? 1 : 0));
-    send(msgBuzzer.set(value == LOW ? 1 : 0));
-    oldValue = value;
-    buzzerState = !buzzerState;
-    digitalWrite(BUZZER_PIN, buzzerState);
-    
+  bool ir_detected = digitalRead(INF_PIN);
+  
+  if (!ir_detected && !buzzer_active) {
+    buzzer_active = true;
+    buzzer_activation_time = millis();
+    digitalWrite(BUZZER_PIN, HIGH);
+    send(msgBuzzer.set(buzzer_active));
   }
   
+  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {
+    buzzer_active = false;
+    digitalWrite(BUZZER_PIN, LOW);
+    send(msgBuzzer.set(buzzer_active));
+  }
+  
+  //--------------------------------------------------------------------------------------------------------------------------------------------
+
+  //-------------------------------------------------- SENSOR TEMP+HUM -------------------------------------------------------------------------
 
   if (millis() % 60000 == 0){
     
@@ -155,7 +164,7 @@ void loop()
 
   }
 
-  
+  //--------------------------------------------------------------------------------------------------------------------------------------------
   // Comprobación del estado del LED
     
   bool newState = digitalRead(ledPin);
@@ -183,12 +192,6 @@ void loop()
 
 void receive(const MyMessage &message) {
   // We only expect one type of message from controller. But we better check anyway.
-
-  if (message.getSensor()==CHILD_ID4 && message.type == V_STATUS) {
-    int value = message.getInt();
-    buzzerState = value == 1 ? HIGH : LOW;
-    digitalWrite(BUZZER_PIN, buzzerState);
-  }
 
   
   if (message.getSensor()==CHILD_ID && message.type == V_STATUS) {
