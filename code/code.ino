@@ -36,6 +36,8 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define CHILD_ID4 3
 #define INF_PIN 3
 
+#define CHILD_ID36 36
+
 
 int oldValue = 0;
 int oldValue2 = 0;
@@ -49,11 +51,14 @@ boolean lastButtonState = LOW;
 boolean lastButtonState2 = LOW;
 bool ledState2 = false;
 bool ledState3 = false;
+bool ledState4 = false;
 boolean buttonStateFromController = HIGH;
+
+bool alarmaEncendida = false;
 
 bool buzzer_active = false;
 unsigned long buzzer_activation_time = 0;
-unsigned long buzzer_duration = 10000;
+unsigned long buzzer_duration = 3000;
 
 MyMessage msg(CHILD_ID, V_LIGHT);
 MyMessage msg2(CHILD_ID2, V_LIGHT);
@@ -63,6 +68,7 @@ MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgBuzzer(CHILD_ID3, V_STATUS);
 MyMessage msgBoton1(CHILD_ID31, V_STATUS);
 MyMessage msgBoton2(CHILD_ID33, V_STATUS);
+MyMessage msgBotonAlarma(CHILD_ID36, V_STATUS);
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
 
@@ -86,6 +92,7 @@ void setup()
   present(CHILD_ID3, S_BINARY);
   present(CHILD_ID31, S_DOOR);
   present(CHILD_ID33, S_DOOR);
+  present(CHILD_ID36, S_DOOR);
 
 }
 
@@ -129,14 +136,20 @@ void loop()
 
   bool ir_detected = digitalRead(INF_PIN);
   
-  if (!ir_detected && !buzzer_active) {
-    buzzer_active = true;
-    buzzer_activation_time = millis();
-    digitalWrite(BUZZER_PIN, HIGH);
-    send(msgBuzzer.set(buzzer_active));
+  
+  if (!ir_detected && !buzzer_active ) {
+    Serial.println(!ir_detected);
+
+    if(alarmaEncendida){
+      
+      buzzer_active = true;
+      buzzer_activation_time = millis();
+      digitalWrite(BUZZER_PIN, HIGH);
+      send(msgBuzzer.set(buzzer_active));
+    }
   }
   
-  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {
+  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) { // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
     buzzer_active = false;
     digitalWrite(BUZZER_PIN, LOW);
     send(msgBuzzer.set(buzzer_active));
@@ -185,6 +198,7 @@ void loop()
     send(msg3.set(ledState3));
   }
 
+
   
 
   // Procesamiento de los mensajes recibidos
@@ -197,6 +211,15 @@ void receive(const MyMessage &message) {
   if (message.getSensor()==CHILD_ID && message.type == V_STATUS) {
     
     digitalWrite(ledPin, message.getBool()?HIGH:LOW);
+  } 
+
+  if (message.getSensor()==CHILD_ID36 && message.type == V_STATUS) {
+    
+    if(message.getBool()) {
+      alarmaEncendida = true;
+    }else {
+      alarmaEncendida = false;
+    }
   } 
 
   if (message.getSensor()==CHILD_ID5 && message.type == V_STATUS) {
