@@ -11,9 +11,16 @@
 
 #include <MySensors.h>
 #include <DHT.h>
+#include <Servo.h> 
 
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
+
+#define SERVO_DIGITAL_OUT_PIN 11
+#define SERVO_MIN 0 // Fine tune your servos min. 0-180
+#define SERVO_MAX 180  // Fine tune your servos max. 0-180
+#define DETACH_DELAY 900 // Tune this to let your movement finish before detaching the servo
+#define CHILD_ID11 11   // Id of the sensor child
 
 #define SENSOR_TEMP_OFFSET 0
 #define ledPin 6
@@ -69,8 +76,13 @@ MyMessage msgBuzzer(CHILD_ID3, V_STATUS);
 MyMessage msgBoton1(CHILD_ID31, V_STATUS);
 MyMessage msgBoton2(CHILD_ID33, V_STATUS);
 MyMessage msgBotonAlarma(CHILD_ID36, V_STATUS);
+MyMessage msgServo(CHILD_ID11, V_DIMMER);
+Servo myservo;
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
+
+unsigned long timeOfLastChange = 0;
+bool attachedServo = false;
 
 void setup()
 {
@@ -93,6 +105,8 @@ void setup()
   present(CHILD_ID31, S_DOOR);
   present(CHILD_ID33, S_DOOR);
   present(CHILD_ID36, S_DOOR);
+  request(CHILD_ID11, V_DIMMER);
+  present(CHILD_ID11, S_COVER);
 
 }
 
@@ -138,7 +152,7 @@ void loop()
   
   
   if (!ir_detected && !buzzer_active ) {
-    Serial.println(!ir_detected);
+    
 
     if(alarmaEncendida){
       
@@ -158,6 +172,11 @@ void loop()
   //--------------------------------------------------------------------------------------------------------------------------------------------
 
   //-------------------------------------------------- SENSOR TEMP+HUM -------------------------------------------------------------------------
+
+  if (attachedServo && millis() - timeOfLastChange > DETACH_DELAY) {
+     myservo.detach();
+     attachedServo = false;
+  }
 
   if (millis() % 60000 == 0){
     
@@ -206,8 +225,31 @@ void loop()
 
 void receive(const MyMessage &message) {
   // We only expect one type of message from controller. But we better check anyway.
+   if (message.sensor == CHILD_ID11) {
+    myservo.attach(SERVO_DIGITAL_OUT_PIN);   
+    attachedServo = true;
+  if (message.getSensor()==CHILD_ID11 && message.type==V_DIMMER) { // This could be M_ACK_VARIABLE or M_SET_VARIABLE
+     int val = message.getInt();
+     myservo.write(SERVO_MAX + (SERVO_MIN-SERVO_MAX)/100 * val); // sets the servo position 0-180
+     // Write some debug info
+     Serial.print("Servo changed. new state: ");
+     Serial.println(val);
+   } else if (message.getSensor()==CHILD_ID11 && message.type==V_UP) {
+     Serial.println("Servo UP command");
+     myservo.write(SERVO_MIN);
+     send(msgServo.set(100));
+   } else if (message.getSensor()==CHILD_ID11 && message.type==V_DOWN) {
+     Serial.println("Servo DOWN command");
+     myservo.write(SERVO_MAX); 
+     send(msgServo.set(0));
+   } else if ( message.getSensor()==CHILD_ID11 && message.type==V_STOP) {
+     Serial.println("Servo STOP command");
+     myservo.detach();
+     attachedServo = false;
 
-  
+   }
+   timeOfLastChange = millis();
+  }
   if (message.getSensor()==CHILD_ID && message.type == V_STATUS) {
     
     digitalWrite(ledPin, message.getBool()?HIGH:LOW);
