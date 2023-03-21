@@ -6,45 +6,58 @@
 #define MY_RF24_CS_PIN 10
 #define MY_RF24_CHANNEL 76
 #define MY_NODE_ID 95
-#define DHT_DATA_PIN 5
-#define DHTTYPE DHT11
+
 
 #include <MySensors.h>
 #include <DHT.h>
 #include <Servo.h> 
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
 
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
 
 #define SERVO_DIGITAL_OUT_PIN 11
 #define SERVO_MIN 0 // Fine tune your servos min. 0-180
-#define SERVO_MAX 180  // Fine tune your servos max. 0-180
+#define SERVO_MAX 30  // Fine tune your servos max. 0-180
 #define DETACH_DELAY 900 // Tune this to let your movement finish before detaching the servo
 #define CHILD_ID11 11   // Id of the sensor child
 
 #define SENSOR_TEMP_OFFSET 0
-#define ledPin 6
+
+#define DHT_DATA_PIN 5 //DHT11 PIN
+#define DHTTYPE DHT11
+
+#define ledPin 6 //Led1 Pin
 #define CHILD_ID 6
-#define ledPin2 7
+
+
+#define ledPin2 7 //Led2 Pin
 #define CHILD_ID2 7
-#define ledPin3 8
+
+#define ledPin3 8 //Led3 Pin
 #define CHILD_ID5 8
 
 #define CHILD_ID_HUM 0
 #define CHILD_ID_TEMP 1
 
+#define boton1 31 //Interruptor Led1 + Led2
 #define CHILD_ID31 31
-#define boton1 31
-#define boton2 33
+
+
+#define boton2 33 //Interruptor Led3
 #define CHILD_ID33 33
+
+#define BUZZER_PIN 2 //Buzzer Pin
 #define CHILD_ID3 2
-#define BUZZER_PIN 2
 
-#define CHILD_ID4 3
-#define INF_PIN 3
+#define INF_PIN 3 //Infrarrojos Buzzer
+#define CHILD_ID4 3 
 
-#define CHILD_ID36 36
+#define CHILD_ID36 36 //Interruptor Alarma
 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int oldValue = 0;
 int oldValue2 = 0;
@@ -86,7 +99,13 @@ bool attachedServo = false;
 
 void setup()
 {
+
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
   dht.begin();
+  lcd.setCursor(0, 0);
+  lcd.print("Loading...");
   pinMode(boton1, INPUT_PULLUP);
   pinMode(boton2, INPUT_PULLUP);
   pinMode(ledPin, OUTPUT);
@@ -171,16 +190,21 @@ void loop()
   
   //--------------------------------------------------------------------------------------------------------------------------------------------
 
-  //-------------------------------------------------- SENSOR TEMP+HUM -------------------------------------------------------------------------
+  //-------------------------------------------------- SERVO -------------------------------------------------------------------------
 
   if (attachedServo && millis() - timeOfLastChange > DETACH_DELAY) {
      myservo.detach();
      attachedServo = false;
   }
 
+  //--------------------------------------------------------------------------------------------------------------------------------------------
+
+  //-------------------------------------------------- SENSOR TEMP+HUM + LCD -------------------------------------------------------------------------
+
+
   if (millis() % 60000 == 0){
     
-
+  lcd.clear();
   dht.read(true);
   float temperature = dht.readTemperature();
   float humidity = dht.readHumidity();
@@ -190,6 +214,12 @@ void loop()
 
   Serial.println("Temperatura: ");
   Serial.println(temperature);
+  lcd.setCursor(0, 0); // X, Y
+  lcd.print("Temp: ");
+  lcd.print(temperature);
+  lcd.setCursor(0, 1); // X, Y
+  lcd.print("Hum: ");
+  lcd.print(humidity);
 
   send(msgTemp.set(temperature, 1));
   send(msgHum.set(humidity, 1));
@@ -228,7 +258,7 @@ void receive(const MyMessage &message) {
    if (message.sensor == CHILD_ID11) {
     myservo.attach(SERVO_DIGITAL_OUT_PIN);   
     attachedServo = true;
-  if (message.getSensor()==CHILD_ID11 && message.type==V_DIMMER) { // This could be M_ACK_VARIABLE or M_SET_VARIABLE
+   if (message.getSensor()==CHILD_ID11 && message.type==V_DIMMER) { // This could be M_ACK_VARIABLE or M_SET_VARIABLE
      int val = message.getInt();
      myservo.write(SERVO_MAX + (SERVO_MIN-SERVO_MAX)/100 * val); // sets the servo position 0-180
      // Write some debug info
@@ -287,10 +317,7 @@ void receive(const MyMessage &message) {
      // Change relay state
     digitalWrite(ledPin2, message.getBool()?HIGH:LOW);
      // Store state in eeprom
-     Serial.print("Incoming change sensor:");
-     Serial.print(message.getSensor());
-     Serial.print(", New status: ");
-     Serial.println(message.getBool());
+     
      
    } 
 } 
