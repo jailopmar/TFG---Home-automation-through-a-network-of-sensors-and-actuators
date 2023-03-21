@@ -2,8 +2,8 @@
 
 // Enable and select radio type attached
 #define MY_RADIO_RF24
-#define MY_RF24_CE_PIN 9
-#define MY_RF24_CS_PIN 10
+#define MY_RF24_CE_PIN 49
+#define MY_RF24_CS_PIN 48
 #define MY_RF24_CHANNEL 76
 #define MY_NODE_ID 95
 
@@ -26,18 +26,18 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 
 #define SENSOR_TEMP_OFFSET 0
 
-#define DHT_DATA_PIN 5 //DHT11 PIN
+#define DHT_DATA_PIN 30 //DHT11 PIN
 #define DHTTYPE DHT11
 
-#define ledPin 6 //Led1 Pin
-#define CHILD_ID 6
+#define ledPin 29 //Led1 Pin
+#define CHILD_ID 29
 
 
-#define ledPin2 7 //Led2 Pin
-#define CHILD_ID2 7
+#define ledPin2 28 //Led2 Pin
+#define CHILD_ID2 28
 
-#define ledPin3 8 //Led3 Pin
-#define CHILD_ID5 8
+#define ledPin3 27 //Led3 Pin
+#define CHILD_ID5 27
 
 #define CHILD_ID_HUM 0
 #define CHILD_ID_TEMP 1
@@ -49,11 +49,11 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define boton2 33 //Interruptor Led3
 #define CHILD_ID33 33
 
-#define BUZZER_PIN 2 //Buzzer Pin
-#define CHILD_ID3 2
+#define BUZZER_PIN 32 //Buzzer Pin
+#define CHILD_ID3 32
 
-#define INF_PIN 3 //Infrarrojos Buzzer
-#define CHILD_ID4 3 
+#define INF_PIN 34 //Infrarrojos Buzzer
+#define CHILD_ID4 34 
 
 #define CHILD_ID36 36 //Interruptor Alarma
 
