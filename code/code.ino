@@ -13,6 +13,7 @@
 #include <Servo.h> 
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
+#include <Stepper.h>
 
 
 static const uint64_t UPDATE_INTERVAL = 5000;
@@ -45,9 +46,11 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define boton1 31 //Interruptor Led1 + Led2
 #define CHILD_ID31 31
 
-
 #define boton2 33 //Interruptor Led3
 #define CHILD_ID33 33
+
+#define StepAscensor 35 //Interruptor Stepmotor
+#define CHILD_ID35 35
 
 #define BUZZER_PIN 32 //Buzzer Pin
 #define CHILD_ID3 32
@@ -80,6 +83,9 @@ bool buzzer_active = false;
 unsigned long buzzer_activation_time = 0;
 unsigned long buzzer_duration = 3000;
 
+const int stepsPerRevolution = 2038;
+Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
+
 MyMessage msg(CHILD_ID, V_LIGHT);
 MyMessage msg2(CHILD_ID2, V_LIGHT);
 MyMessage msg3(CHILD_ID5, V_LIGHT);
@@ -87,6 +93,7 @@ MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgBuzzer(CHILD_ID3, V_STATUS);
 MyMessage msgBoton1(CHILD_ID31, V_STATUS);
+MyMessage msgStepBoton(CHILD_ID35, V_STATUS);
 MyMessage msgBoton2(CHILD_ID33, V_STATUS);
 MyMessage msgBotonAlarma(CHILD_ID36, V_STATUS);
 MyMessage msgServo(CHILD_ID11, V_DIMMER);
@@ -108,6 +115,7 @@ void setup()
   lcd.print("Loading...");
   pinMode(boton1, INPUT_PULLUP);
   pinMode(boton2, INPUT_PULLUP);
+  pinMode(StepAscensor, INPUT_PULLUP);
   pinMode(ledPin, OUTPUT);
   pinMode(ledPin2, OUTPUT);
   pinMode(ledPin3, OUTPUT);
@@ -124,8 +132,11 @@ void setup()
   present(CHILD_ID31, S_DOOR);
   present(CHILD_ID33, S_DOOR);
   present(CHILD_ID36, S_DOOR);
+  present(CHILD_ID35, S_DOOR);
   request(CHILD_ID11, V_DIMMER);
   present(CHILD_ID11, S_COVER);
+
+  myStepper.setSpeed(10);
 
 }
 
@@ -302,8 +313,35 @@ void receive(const MyMessage &message) {
   if (message.getSensor()==CHILD_ID31 && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonState = message.getBool();
-    digitalWrite(ledPin, lastButtonState ? HIGH : LOW);
-    digitalWrite(ledPin2, lastButtonState ? HIGH : LOW);
+    //Serial.println(message.getBool());
+    //digitalWrite(ledPin, lastButtonState ? HIGH : LOW);
+    //digitalWrite(ledPin2, lastButtonState ? HIGH : LOW);
+    if (message.getBool() == 1){
+
+      digitalWrite(ledPin, HIGH);
+      digitalWrite(ledPin2, HIGH);
+
+      } else if (message.getBool() == 0){
+
+        digitalWrite(ledPin, LOW);
+        digitalWrite(ledPin2, LOW);
+
+        }
+    //Serial.println(lastButtonState);
+  }
+
+  if (message.getSensor()==CHILD_ID35 && message.type == V_STATUS) {
+    // Cambiar el estado del LED si se recibe un mensaje del botón
+    
+    if (message.getBool() == 1){
+
+      myStepper.step(stepsPerRevolution * 5);
+
+      } else if (message.getBool() == 0){
+
+        myStepper.step(-stepsPerRevolution * 5);
+
+        }
     //Serial.println(lastButtonState);
   }
 
