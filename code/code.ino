@@ -19,8 +19,19 @@
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
 
+#define interruptorPuerta1 43 // Interruptor del baño
+#define CHILD_ID_PUERTA1 43
 
 #define SENSOR_TEMP_OFFSET 0
+
+#define CHILD_ID_LIGHT 51
+#define photocellPin A1
+int threshold = 200;
+
+#define CHILD_ID_MQ2 48
+#define pinDigitalMQ2 13
+#define pinAnalogMQ2 A0
+
 
 #define DHT_DATA_PIN 30 //DHT11 PIN
 #define DHTTYPE DHT11
@@ -31,6 +42,12 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define ledSalon2 28 //Led2 Pin
 #define CHILD_ID_LED_SALON2 28
 
+#define ledJardin1 41 //Led1 Jardin
+#define CHILD_ID_LED_JARDIN1 47
+
+#define ledJardin2 42 //Led1 Jardin
+#define CHILD_ID_LED_JARDIN2 46
+
 #define ledBath 26 //Led baño
 #define CHILD_ID_LED_BATH 26
 
@@ -40,7 +57,6 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define CHILD_ID_LED_STAIR 24
 #define infStair1 23
 #define infStair2 22
-
 
 
 #define interruptorBath 25 // Interruptor del baño
@@ -74,6 +90,8 @@ static const uint8_t FORCE_UPDATE_N_READS = 10;
 #define greenpin 4
 #define CHILD_ID_RGB 31
 
+char temp_Msg[20];
+
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int oldValue = 0;
@@ -95,6 +113,10 @@ unsigned long buzzer_duration = 3000;
 unsigned long stairActivationTime = 0;
 unsigned long ledStairDuration = 15000;
 
+uint16_t gasValue;
+bool isGas = false;
+
+
 
 const int stepsPerRevolution = 2048;
 Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
@@ -106,7 +128,7 @@ MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgBuzzer(CHILD_ID_BUZZER, V_STATUS);
 MyMessage msgIntSalon(CHILD_ID_SALON, V_STATUS);
-MyMessage msgStepBoton(CHILD_ID_ASCENSOR, V_STATUS);
+MyMessage msgStepBoton(CHILD_ID_ASCENSOR, V_VAR1);
 MyMessage msgIntGaraje(CHILD_ID_GARAJE, V_STATUS);
 MyMessage msgBotonAlarma(CHILD_ID_ALARMA, V_STATUS);
 MyMessage msgBright(CHILD_ID_RGB, V_PERCENTAGE);
@@ -115,17 +137,34 @@ MyMessage msgLight(CHILD_ID_RGB, V_LIGHT);
 MyMessage msgBath(CHILD_ID_LED_BATH, V_LIGHT);
 MyMessage msgIntBath(CHILD_ID_BATH, V_STATUS);
 MyMessage msgStair(CHILD_ID_LED_STAIR, V_LIGHT);
+MyMessage msgMQ2(CHILD_ID_MQ2, V_LEVEL); 
+MyMessage msgPuerta1(CHILD_ID_PUERTA1, V_STATUS);
+MyMessage lightMsg(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
+MyMessage msgJardin1(CHILD_ID_LED_JARDIN1, V_LIGHT);
+MyMessage msgJardin2(CHILD_ID_LED_JARDIN2, V_LIGHT);
+
+
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
 
 unsigned long timeOfLastChange = 0;
 
 
+unsigned long tiempo_funcion1 = 0;
+unsigned long tiempo_funcion2 = 0;
+const unsigned long intervalo = 30000;
+
+
+
 long RGB_values[3] = {0, 0, 0};
 float valor;
 
+Servo servo1;
+int i = 1;
+
 void setup()
 {
+  servo1.attach(5);
 
   lcd.init();
   lcd.backlight();
@@ -136,6 +175,7 @@ void setup()
   pinMode(interruptorSalon, INPUT_PULLUP);
   pinMode(interruptorGaraje, INPUT_PULLUP);
   pinMode(interruptorBath, INPUT_PULLUP);
+  pinMode(interruptorPuerta1, INPUT_PULLUP);
   pinMode(StepAscensor, INPUT_PULLUP);
   pinMode(ledSalon1, OUTPUT);
   pinMode(ledSalon2, OUTPUT);
@@ -143,10 +183,13 @@ void setup()
   pinMode(ledAlarma, OUTPUT);
   pinMode(ledBath, OUTPUT);
   pinMode(ledStair, OUTPUT);
+  pinMode(ledJardin1, OUTPUT);
+  pinMode(ledJardin2, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   pinMode(redpin, OUTPUT);
   pinMode(greenpin, OUTPUT);
   pinMode(bluepin, OUTPUT);
+  pinMode(pinDigitalMQ2, INPUT);
 
   // Inicialización de MySensors
   sendSketchInfo("TFG Jaime Lopez Marquez", "0.1");
@@ -166,25 +209,104 @@ void setup()
   present(CHILD_ID_BATH, S_DOOR);
   present(CHILD_ID_LED_BATH, S_LIGHT);
   present(CHILD_ID_LED_STAIR, S_LIGHT);
+  present(CHILD_ID_MQ2, S_AIR_QUALITY);
+  present(CHILD_ID_PUERTA1, S_DOOR);
+  present(CHILD_ID_LIGHT, S_LIGHT_LEVEL);
+  present(CHILD_ID_LED_JARDIN1, S_LIGHT);
+  present(CHILD_ID_LED_JARDIN2, S_LIGHT);
 
   request(CHILD_ID_RGB, V_RGB);
   request(CHILD_ID_RGB, V_PERCENTAGE);
   request(CHILD_ID_RGB, V_LIGHT);
 
+  /*
   send(msgBright.set(100));
   send(msgColor.set("000000"));
   send(msgLight.set(1));
+  */
 
   myStepper.setSpeed(10);
 
-  digitalWrite(redpin, 0);
-  digitalWrite(greenpin, 255);
-  digitalWrite(bluepin, 0);
+  servo1.write(1);
 
 }
 
 void loop()
 {
+
+  unsigned long tiempo_actual = millis();
+
+
+  if (millis() % 60000 == 0) {
+
+    i++;
+
+    if(i % 2 == 0) {
+    
+    if(analogRead(photocellPin) < threshold){
+      int percent1 = map(analogRead(photocellPin), 0, 1023, 0, 100);
+      send(lightMsg.set(percent1));
+      digitalWrite(ledJardin1, HIGH);
+      digitalWrite(ledJardin2, HIGH);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Luz: ");
+      lcd.print(percent1);
+      lcd.write('%');
+      lcd.setCursor(0, 1);
+      lcd.print("Leds >> ON");
+      send(msgJardin1.set(1));
+      send(msgJardin2.set(1));
+    } else{
+      int percent2 = map(analogRead(photocellPin), 0, 1023, 0, 100);
+      send(lightMsg.set(percent2));
+      digitalWrite(ledJardin1, LOW);
+      digitalWrite(ledJardin2, LOW);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Luz: ");
+      lcd.print(percent2);
+      lcd.write('%');
+      lcd.setCursor(0, 1);
+      lcd.print("Leds >> OFF");
+      send(msgJardin1.set(0));
+      send(msgJardin2.set(0));
+    }
+
+    }else{
+
+    lcd.clear();
+    dht.read(true);
+    float temperature = dht.readTemperature();
+    float humidity = dht.readHumidity();
+
+    Serial.println(F("Humedad: "));
+    Serial.println(humidity);
+
+    Serial.println("Temperatura: ");
+    Serial.println(temperature);
+    lcd.setCursor(0, 0); // X, Y
+    lcd.print("Temp: ");
+    lcd.print(temperature);
+    lcd.write(0xDF);
+    lcd.print("C");
+    lcd.setCursor(0, 1); // X, Y
+    lcd.print("Hum:  ");
+    lcd.print(humidity);
+    lcd.write('%');
+    send(msgTemp.set(temperature, 1));
+    send(msgHum.set(humidity, 1));
+
+      }
+  }
+
+  if(i == 199){
+
+    i = 1;
+
+}
+
+  //--------------------------------------------------------------------------------------------------------------------------------------------
 
   //---------------------------------------------------- INTERRUPTORES LEDS ---------------------------------------------------------------------------------
   
@@ -243,6 +365,11 @@ void loop()
       digitalWrite(BUZZER_PIN, HIGH);
       digitalWrite(ledAlarma, HIGH);
       send(msgBuzzer.set(buzzer_active));
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Alarma!!");
+      lcd.setCursor(0, 1);
+      lcd.print("Enviando datos...");
     }
   }
   
@@ -280,31 +407,39 @@ void loop()
   //-------------------------------------------------- SENSOR TEMP+HUM + LCD -------------------------------------------------------------------------
 
 
-  if (millis() % 60000 == 0){
-    
-  lcd.clear();
-  dht.read(true);
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
+  
 
-  Serial.println(F("Humedad: "));
-  Serial.println(humidity);
-
-  Serial.println("Temperatura: ");
-  Serial.println(temperature);
-  lcd.setCursor(0, 0); // X, Y
-  lcd.print("Temp: ");
-  lcd.print(temperature);
-  lcd.setCursor(0, 1); // X, Y
-  lcd.print("Hum:  ");
-  lcd.print(humidity);
-
-  send(msgTemp.set(temperature, 1));
-  send(msgHum.set(humidity, 1));
-
-  }
+  
 
   //--------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+  //-------------------------------------------------- SENSOR MQ2 -------------------------------------------------------------------------
+
+
+  
+
+  if (millis() % 6000000 == 0){
+        Serial.println(analogRead(pinAnalogMQ2));
+        send(msgMQ2.set(analogRead(pinAnalogMQ2)));
+        
+
+
+
+
+
+
+
+    }
+
+
+
+    //--------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
   // Comprobación del estado del LED
     
   bool newStateLedSalon1 = digitalRead(ledSalon1);
@@ -333,7 +468,6 @@ void loop()
 
   
 
-
 }
 
 
@@ -358,8 +492,9 @@ void receive(const MyMessage &message) {
  if (message.getSensor()==CHILD_ID_RGB && message.type == V_LIGHT) {
    if (message.getInt() == 0) {
      digitalWrite(redpin, 0);
-     digitalWrite(bluepin, 0);
      digitalWrite(greenpin, 0);
+     digitalWrite(bluepin, 0);
+     
 
    }
    if (message.getInt() == 1) {
@@ -419,14 +554,30 @@ void receive(const MyMessage &message) {
     
     if (message.getBool() == 1){
 
+      
       myStepper.step(stepsPerRevolution * 5);
+      
+      } else if (message.getBool() == 0){
+       
+        myStepper.step(-stepsPerRevolution * 5);
+        
+
+        }
+  }
+
+
+  if (message.getSensor()==CHILD_ID_PUERTA1 && message.type == V_STATUS) {
+    // Cambiar el estado del LED si se recibe un mensaje del botón
+    
+    if (message.getBool() == 1){
+
+      servo1.write(1);
 
       } else if (message.getBool() == 0){
 
-        myStepper.step(-stepsPerRevolution * 5);
+        servo1.write(179);
 
         }
-    //Serial.println(lastButtonStateSalon);
   }
 
   if (message.getSensor()==CHILD_ID_GARAJE && message.type == V_STATUS) {
@@ -442,10 +593,13 @@ void receive(const MyMessage &message) {
   }
 
    if (message.getSensor()==CHILD_ID_LED_SALON2 && message.getType()== V_STATUS) {
-     // Change relay state
+     
     digitalWrite(ledSalon2, message.getBool()?HIGH:LOW);
-     // Store state in eeprom
+     
      
      
    } 
 } 
+
+
+
