@@ -19,8 +19,14 @@
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
 
-#define interruptorPuerta1 43 // Interruptor del baño
+#define interruptorPuertaGaraje 42 // Interruptor puerta Garaje
+#define CHILD_ID_PUERTA_GARAJE 42
+
+#define interruptorPuerta1 43 // Interruptor puerta 1
 #define CHILD_ID_PUERTA1 43
+
+#define interruptorPuerta2 44 // Interruptor puerta 2
+#define CHILD_ID_PUERTA2 44
 
 #define SENSOR_TEMP_OFFSET 0
 
@@ -42,10 +48,10 @@ int threshold = 200;
 #define ledSalon2 28 //Led2 Pin
 #define CHILD_ID_LED_SALON2 28
 
-#define ledJardin1 41 //Led1 Jardin
+#define ledJardin1 47 //Led1 Jardin
 #define CHILD_ID_LED_JARDIN1 47
 
-#define ledJardin2 42 //Led1 Jardin
+#define ledJardin2 46 //Led1 Jardin
 #define CHILD_ID_LED_JARDIN2 46
 
 #define ledBath 26 //Led baño
@@ -80,6 +86,7 @@ int threshold = 200;
 #define BUZZER_PIN 32 //Buzzer Pin
 #define CHILD_ID_BUZZER 32
 
+#define INF_PIN2 45
 #define INF_PIN 34 //Infrarrojos Buzzer
 #define CHILD_ID_INF 34 
 
@@ -139,6 +146,8 @@ MyMessage msgIntBath(CHILD_ID_BATH, V_STATUS);
 MyMessage msgStair(CHILD_ID_LED_STAIR, V_LIGHT);
 MyMessage msgMQ2(CHILD_ID_MQ2, V_LEVEL); 
 MyMessage msgPuerta1(CHILD_ID_PUERTA1, V_STATUS);
+MyMessage msgPuerta2(CHILD_ID_PUERTA2, V_STATUS);
+MyMessage msgPuertaGaraje(CHILD_ID_PUERTA_GARAJE, V_STATUS);
 MyMessage lightMsg(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
 MyMessage msgJardin1(CHILD_ID_LED_JARDIN1, V_LIGHT);
 MyMessage msgJardin2(CHILD_ID_LED_JARDIN2, V_LIGHT);
@@ -160,11 +169,16 @@ long RGB_values[3] = {0, 0, 0};
 float valor;
 
 Servo servo1;
+Servo servo2;
+Servo servoGaraje;
+
 int i = 1;
 
 void setup()
 {
   servo1.attach(5);
+  servo2.attach(6);
+  servoGaraje.attach(7);
 
   lcd.init();
   lcd.backlight();
@@ -176,6 +190,8 @@ void setup()
   pinMode(interruptorGaraje, INPUT_PULLUP);
   pinMode(interruptorBath, INPUT_PULLUP);
   pinMode(interruptorPuerta1, INPUT_PULLUP);
+  pinMode(interruptorPuerta2, INPUT_PULLUP);
+  pinMode(interruptorPuertaGaraje, INPUT_PULLUP);
   pinMode(StepAscensor, INPUT_PULLUP);
   pinMode(ledSalon1, OUTPUT);
   pinMode(ledSalon2, OUTPUT);
@@ -211,6 +227,8 @@ void setup()
   present(CHILD_ID_LED_STAIR, S_LIGHT);
   present(CHILD_ID_MQ2, S_AIR_QUALITY);
   present(CHILD_ID_PUERTA1, S_DOOR);
+  present(CHILD_ID_PUERTA2, S_DOOR);
+  present(CHILD_ID_PUERTA_GARAJE, S_DOOR);
   present(CHILD_ID_LIGHT, S_LIGHT_LEVEL);
   present(CHILD_ID_LED_JARDIN1, S_LIGHT);
   present(CHILD_ID_LED_JARDIN2, S_LIGHT);
@@ -228,6 +246,8 @@ void setup()
   myStepper.setSpeed(10);
 
   servo1.write(1);
+  servo2.write(1);
+  servoGaraje.write(1);
 
 }
 
@@ -300,7 +320,7 @@ void loop()
       }
   }
 
-  if(i == 199){
+  if(i == 3){
 
     i = 1;
 
@@ -353,9 +373,11 @@ void loop()
   
 
   bool ir_detected = digitalRead(INF_PIN);
+  bool ir_detected2 = digitalRead(INF_PIN2);
   
   
-  if (!ir_detected && !buzzer_active ) {
+  if (!ir_detected || !ir_detected2  && !buzzer_active ) {
+
     
 
     if(alarmaState){
@@ -576,6 +598,34 @@ void receive(const MyMessage &message) {
       } else if (message.getBool() == 0){
 
         servo1.write(179);
+
+        }
+  }
+
+   if (message.getSensor()==CHILD_ID_PUERTA2 && message.type == V_STATUS) {
+    // Cambiar el estado del LED si se recibe un mensaje del botón
+    
+    if (message.getBool() == 1){
+
+      servo2.write(1);
+
+      } else if (message.getBool() == 0){
+
+        servo2.write(179);
+
+        }
+  }
+
+  if (message.getSensor()==CHILD_ID_PUERTA_GARAJE && message.type == V_STATUS) {
+    // Cambiar el estado del LED si se recibe un mensaje del botón
+    
+    if (message.getBool() == 1){
+
+      servoGaraje.write(1);
+
+      } else if (message.getBool() == 0){
+
+        servoGaraje.write(100);
 
         }
   }
