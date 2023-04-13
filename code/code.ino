@@ -19,6 +19,15 @@
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
 
+#define interruptorPasillo 39 // Interruptor de leds del pasillo
+#define CHILD_ID_PASILLO 39
+
+#define ledPasillo1 40 // 
+#define CHILD_ID_LED_PASILLO1 40
+
+#define ledPasillo2 41 // 
+#define CHILD_ID_LED_PASILLO2 41
+
 #define interruptorPuertaGaraje 42 // Interruptor puerta Garaje
 #define CHILD_ID_PUERTA_GARAJE 42
 
@@ -106,9 +115,12 @@ int oldValue2 = 0;
 int buzzerState = HIGH;
 bool ledStateSalon1 = false;
 boolean lastButtonStateSalon = LOW;
+boolean lastButtonStatePasillo = LOW;
 boolean lastButtonStateGaraje = LOW;
 boolean lastButtonStateBath = LOW;
 bool ledStateSalon2 = false;
+bool ledStatePasillo = false;
+bool ledStatePasillo2 = false;
 bool ledStateGaraje = false;
 bool ledStateBath = false;
 bool alarmaState = false;
@@ -151,6 +163,10 @@ MyMessage msgPuertaGaraje(CHILD_ID_PUERTA_GARAJE, V_STATUS);
 MyMessage lightMsg(CHILD_ID_LIGHT, V_LIGHT_LEVEL);
 MyMessage msgJardin1(CHILD_ID_LED_JARDIN1, V_LIGHT);
 MyMessage msgJardin2(CHILD_ID_LED_JARDIN2, V_LIGHT);
+MyMessage msgPasillo1(CHILD_ID_LED_PASILLO1, V_LIGHT);
+MyMessage msgPasillo2(CHILD_ID_LED_PASILLO2, V_LIGHT);
+MyMessage msgIntPasillo(CHILD_ID_PASILLO, V_STATUS);
+
 
 
 
@@ -186,6 +202,7 @@ void setup()
   dht.begin();
   lcd.setCursor(0, 0);
   lcd.print("Loading...");
+  pinMode(interruptorPasillo, INPUT_PULLUP);
   pinMode(interruptorSalon, INPUT_PULLUP);
   pinMode(interruptorGaraje, INPUT_PULLUP);
   pinMode(interruptorBath, INPUT_PULLUP);
@@ -195,6 +212,8 @@ void setup()
   pinMode(StepAscensor, INPUT_PULLUP);
   pinMode(ledSalon1, OUTPUT);
   pinMode(ledSalon2, OUTPUT);
+  pinMode(ledPasillo1, OUTPUT);
+  pinMode(ledPasillo2, OUTPUT);
   pinMode(ledGaraje, OUTPUT);
   pinMode(ledAlarma, OUTPUT);
   pinMode(ledBath, OUTPUT);
@@ -232,6 +251,9 @@ void setup()
   present(CHILD_ID_LIGHT, S_LIGHT_LEVEL);
   present(CHILD_ID_LED_JARDIN1, S_LIGHT);
   present(CHILD_ID_LED_JARDIN2, S_LIGHT);
+  present(CHILD_ID_LED_PASILLO1, S_LIGHT);
+  present(CHILD_ID_LED_PASILLO2, S_LIGHT);
+  present(CHILD_ID_PASILLO, S_DOOR);
 
   request(CHILD_ID_RGB, V_RGB);
   request(CHILD_ID_RGB, V_PERCENTAGE);
@@ -330,6 +352,19 @@ void loop()
 
   //---------------------------------------------------- INTERRUPTORES LEDS ---------------------------------------------------------------------------------
   
+  boolean buttonStatePasillo = digitalRead(interruptorPasillo);
+
+  if (buttonStatePasillo == LOW && lastButtonStatePasillo == HIGH) {
+    //send(msgIntSalon.set(!lastButtonStateSalon));
+    ledStatePasillo = !ledStatePasillo;
+    digitalWrite(ledPasillo1, ledStatePasillo);
+    digitalWrite(ledPasillo2, ledStatePasillo);
+    send(msgPasillo1.set(ledStatePasillo));
+    send(msgPasillo2.set(ledStatePasillo));
+    send(msgIntPasillo.set(ledStatePasillo));
+ 
+  }
+  lastButtonStatePasillo = buttonStatePasillo;
 
   boolean buttonStateSalon = digitalRead(interruptorSalon);
 
@@ -409,11 +444,14 @@ void loop()
 
   if (!irStair1 || !irStair2) {
 
+    if (digitalRead(ledStair) == 0) {
+
     ledStairState = true;
     stairActivationTime = millis();
     digitalWrite(ledStair, HIGH);
     send(msgStair.set(ledStairState));
-    
+
+      }
     }
 
     if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) { // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
@@ -488,6 +526,18 @@ void loop()
     send(msgBath.set(ledStateBath));
   }
 
+  bool newStateLedPasillo1 = digitalRead(ledPasillo1);
+  if (newStateLedPasillo1 != ledStatePasillo) {
+    ledStatePasillo = newStateLedPasillo1;
+    send(msgPasillo1.set(ledStatePasillo));
+  }
+
+  bool newStateLedPasillo2 = digitalRead(ledPasillo2);
+  if (newStateLedPasillo2 != ledStatePasillo2) {
+    ledStatePasillo2 = newStateLedPasillo2;
+    send(msgPasillo2.set(ledStatePasillo2));
+  }
+
   
 
 }
@@ -554,21 +604,17 @@ void receive(const MyMessage &message) {
   if (message.getSensor()==CHILD_ID_SALON && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateSalon = message.getBool();
-    //Serial.println(message.getBool());
-    //digitalWrite(ledSalon1, lastButtonStateSalon ? HIGH : LOW);
-    //digitalWrite(ledSalon2, lastButtonStateSalon ? HIGH : LOW);
-    if (message.getBool() == 1){
+    digitalWrite(ledSalon1, lastButtonStateSalon ? HIGH : LOW);
+    digitalWrite(ledSalon2, lastButtonStateSalon ? HIGH : LOW);
+  
+  }
 
-      digitalWrite(ledSalon1, HIGH);
-      digitalWrite(ledSalon2, HIGH);
-
-      } else if (message.getBool() == 0){
-
-        digitalWrite(ledSalon1, LOW);
-        digitalWrite(ledSalon2, LOW);
-
-        }
-    //Serial.println(lastButtonStateSalon);
+   if (message.getSensor()==CHILD_ID_PASILLO && message.type == V_STATUS) {
+    // Cambiar el estado del LED si se recibe un mensaje del botón
+    lastButtonStatePasillo = message.getBool();
+    digitalWrite(ledPasillo1, lastButtonStatePasillo ? HIGH : LOW);
+    digitalWrite(ledPasillo2, lastButtonStatePasillo ? HIGH : LOW);
+  
   }
 
   if (message.getSensor()==CHILD_ID_ASCENSOR && message.type == V_STATUS) {
@@ -597,7 +643,7 @@ void receive(const MyMessage &message) {
 
       } else if (message.getBool() == 0){
 
-        servo1.write(179);
+        servo1.write(110);
 
         }
   }
@@ -611,7 +657,7 @@ void receive(const MyMessage &message) {
 
       } else if (message.getBool() == 0){
 
-        servo2.write(179);
+        servo2.write(110);
 
         }
   }
