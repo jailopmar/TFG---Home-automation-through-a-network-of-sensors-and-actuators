@@ -4,7 +4,7 @@
 #define MY_RADIO_RF24
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 48
-#define MY_RF24_CHANNEL 76
+#define MY_RF24_CHANNEL 90
 #define MY_NODE_ID 95
 
 
@@ -614,11 +614,11 @@ void receive(const MyMessage &message) {
     if (message.getBool() == 1){
 
       
-      myStepper.step(stepsPerRevolution * 5);
+      myStepper.step(stepsPerRevolution * 8.5);
       
       } else if (message.getBool() == 0){
        
-        myStepper.step(-stepsPerRevolution * 5);
+        myStepper.step(-stepsPerRevolution * 8.5);
         
 
         }
@@ -658,11 +658,11 @@ void receive(const MyMessage &message) {
     
     if (message.getBool() == 1){
 
-      servoGaraje.write(1);
+      servoGaraje.write(10);
 
       } else if (message.getBool() == 0){
 
-        servoGaraje.write(100);
+        servoGaraje.write(90);
 
         }
   }
