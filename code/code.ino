@@ -1,4 +1,4 @@
-#define MY_DEBUG 
+#define MY_DEBUG
 
 // Enable and select radio type attached
 #define MY_RADIO_RF24
@@ -10,7 +10,7 @@
 
 #include <MySensors.h>
 #include <DHT.h>
-#include <Servo.h> 
+#include <Servo.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <Stepper.h>
@@ -19,21 +19,19 @@
 static const uint64_t UPDATE_INTERVAL = 5000;
 static const uint8_t FORCE_UPDATE_N_READS = 10;
 
-#define interruptorPasillo 39 // Interruptor de leds del pasillo
+#define interruptorPasillo 39  // Interruptor de leds del pasillo
 #define CHILD_ID_PASILLO 39
 
-#define ledPasillo1 40 // 
+#define ledPasillo1 40  //
 #define CHILD_ID_LED_PASILLO1 40
 
-
-
-#define interruptorPuertaGaraje 42 // Interruptor puerta Garaje
+#define interruptorPuertaGaraje 42  // Interruptor puerta Garaje
 #define CHILD_ID_PUERTA_GARAJE 42
 
-#define interruptorPuerta1 43 // Interruptor puerta 1
+#define interruptorPuerta1 43  // Interruptor puerta 1
 #define CHILD_ID_PUERTA1 43
 
-#define interruptorPuerta2 44 // Interruptor puerta 2
+#define interruptorPuerta2 44  // Interruptor puerta 2
 #define CHILD_ID_PUERTA2 44
 
 #define SENSOR_TEMP_OFFSET 0
@@ -47,58 +45,58 @@ int threshold = 200;
 #define pinAnalogMQ2 A0
 
 
-#define DHT_DATA_PIN 30 //DHT11 PIN
+#define DHT_DATA_PIN 30  //DHT11 PIN
 #define DHTTYPE DHT11
 
-#define ledSalon1 29 //Led1 Pin
+#define ledSalon1 29  //Led1 Pin
 #define CHILD_ID_LED_SALON1 29
 
-#define ledSalon2 28 //Led2 Pin
+#define ledSalon2 28  //Led2 Pin
 #define CHILD_ID_LED_SALON2 28
 
-#define ledJardin1 47 //Led1 Jardin
+#define ledJardin1 47  //Led1 Jardin
 #define CHILD_ID_LED_JARDIN1 47
 
-#define ledJardin2 46 //Led1 Jardin
+#define ledJardin2 46  //Led1 Jardin
 #define CHILD_ID_LED_JARDIN2 46
 
-#define ledBath 26 //Led baño
+#define ledBath 26  //Led baño
 #define CHILD_ID_LED_BATH 26
 
-#define ledAlarma 12 //led rojo de la alarma
+#define ledAlarma 12  //led rojo de la alarma
 
-#define ledStair 24 // Led escaleras
+#define ledStair 24  // Led escaleras
 #define CHILD_ID_LED_STAIR 24
 #define infStair1 23
 #define infStair2 22
 
 
-#define interruptorBath 25 // Interruptor del baño
+#define interruptorBath 25  // Interruptor del baño
 #define CHILD_ID_BATH 25
 
-#define ledGaraje 27 //Led Garaje
+#define ledGaraje 27  //Led Garaje
 #define CHILD_ID_LED_GARAJE 27
 
 #define CHILD_ID_HUM 0
 #define CHILD_ID_TEMP 1
 
-#define interruptorSalon 37 //Interruptor Led1 + Led2 del salón
+#define interruptorSalon 37  //Interruptor Led1 + Led2 del salón
 #define CHILD_ID_SALON 37
 
-#define interruptorGaraje 33 //Interruptor Luz Garaje
+#define interruptorGaraje 33  //Interruptor Luz Garaje
 #define CHILD_ID_GARAJE 33
 
-#define StepAscensor 35 //Interruptor Stepmotor
+#define StepAscensor 35  //Interruptor Stepmotor
 #define CHILD_ID_ASCENSOR 35
 
-#define BUZZER_PIN 32 //Buzzer Pin
+#define BUZZER_PIN 32  //Buzzer Pin
 #define CHILD_ID_BUZZER 32
 
 #define INF_PIN2 45
-#define INF_PIN 34 //Infrarrojos Buzzer
-#define CHILD_ID_INF 34 
+#define INF_PIN 34  //Infrarrojos Buzzer
+#define CHILD_ID_INF 34
 
-#define CHILD_ID_ALARMA 36 //Interruptor Alarma
+#define CHILD_ID_ALARMA 36  //Interruptor Alarma
 
 #define redpin 2
 #define bluepin 3
@@ -134,8 +132,6 @@ unsigned long ledStairDuration = 15000;
 uint16_t gasValue;
 bool isGas = false;
 
-
-
 const int stepsPerRevolution = 2048;
 Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
 
@@ -155,7 +151,7 @@ MyMessage msgLight(CHILD_ID_RGB, V_LIGHT);
 MyMessage msgBath(CHILD_ID_LED_BATH, V_LIGHT);
 MyMessage msgIntBath(CHILD_ID_BATH, V_STATUS);
 MyMessage msgStair(CHILD_ID_LED_STAIR, V_LIGHT);
-MyMessage msgMQ2(CHILD_ID_MQ2, V_LEVEL); 
+MyMessage msgMQ2(CHILD_ID_MQ2, V_LEVEL);
 MyMessage msgPuerta1(CHILD_ID_PUERTA1, V_STATUS);
 MyMessage msgPuerta2(CHILD_ID_PUERTA2, V_STATUS);
 MyMessage msgPuertaGaraje(CHILD_ID_PUERTA_GARAJE, V_STATUS);
@@ -179,7 +175,7 @@ const unsigned long intervalo = 30000;
 
 
 
-long RGB_values[3] = {0, 0, 0};
+long RGB_values[3] = { 0, 0, 0 };
 float valor;
 
 Servo servo1;
@@ -188,8 +184,7 @@ Servo servoGaraje;
 
 int i = 1;
 
-void setup()
-{
+void setup() {
   servo1.attach(5);
   servo2.attach(6);
   servoGaraje.attach(7);
@@ -265,90 +260,72 @@ void setup()
 
   servo1.write(1);
   servo2.write(1);
-  servoGaraje.write(1);
-
+  servoGaraje.write(10);
 }
 
-void loop()
-{
+void sensorLDR() {
 
-  unsigned long tiempo_actual = millis();
+  if (analogRead(photocellPin) < threshold) {
 
-
-  if (millis() % 60000 == 0) {
-
-    i++;
-
-    if(i % 2 == 0) {
-    
-    if(analogRead(photocellPin) < threshold){
-      int percent1 = map(analogRead(photocellPin), 0, 1023, 0, 100);
-      send(lightMsg.set(percent1));
-      digitalWrite(ledJardin1, HIGH);
-      digitalWrite(ledJardin2, HIGH);
-      send(msgJardin1.set(1));
-      send(msgJardin2.set(1));
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Luz: ");
-      lcd.print(percent1);
-      lcd.write('%');
-      lcd.setCursor(0, 1);
-      lcd.print("Leds >> ON");
-      
-    } else{
-      int percent2 = map(analogRead(photocellPin), 0, 1023, 0, 100);
-      send(lightMsg.set(percent2));
-      digitalWrite(ledJardin1, LOW);
-      digitalWrite(ledJardin2, LOW);
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Luz: ");
-      lcd.print(percent2);
-      lcd.write('%');
-      lcd.setCursor(0, 1);
-      lcd.print("Leds >> OFF");
-      send(msgJardin1.set(0));
-      send(msgJardin2.set(0));
-    }
-
-    }else{
-
+    int percent1 = map(analogRead(photocellPin), 0, 1023, 0, 100);
+    send(lightMsg.set(percent1));
+    digitalWrite(ledJardin1, HIGH);
+    digitalWrite(ledJardin2, HIGH);
+    send(msgJardin1.set(1));
+    send(msgJardin2.set(1));
     lcd.clear();
-    dht.read(true);
-    float temperature = dht.readTemperature();
-    float humidity = dht.readHumidity();
-
-    Serial.println(F("Humedad: "));
-    Serial.println(humidity);
-
-    Serial.println("Temperatura: ");
-    Serial.println(temperature);
-    lcd.setCursor(0, 0); // X, Y
-    lcd.print("Temp: ");
-    lcd.print(temperature);
-    lcd.write(0xDF);
-    lcd.print("C");
-    lcd.setCursor(0, 1); // X, Y
-    lcd.print("Hum:  ");
-    lcd.print(humidity);
+    lcd.setCursor(0, 0);
+    lcd.print("Luz: ");
+    lcd.print(percent1);
     lcd.write('%');
-    send(msgTemp.set(temperature, 1));
-    send(msgHum.set(humidity, 1));
+    lcd.setCursor(0, 1);
+    lcd.print("Leds >> ON");
 
-      }
+  } else {
+
+    int percent2 = map(analogRead(photocellPin), 0, 1023, 0, 100);
+    send(lightMsg.set(percent2));
+    digitalWrite(ledJardin1, LOW);
+    digitalWrite(ledJardin2, LOW);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Luz: ");
+    lcd.print(percent2);
+    lcd.write('%');
+    lcd.setCursor(0, 1);
+    lcd.print("Leds >> OFF");
+    send(msgJardin1.set(0));
+    send(msgJardin2.set(0));
   }
-
-  if(i == 3){
-
-    i = 1;
-
 }
 
-  //--------------------------------------------------------------------------------------------------------------------------------------------
+void sensorDHT11() {
 
-  //---------------------------------------------------- INTERRUPTORES LEDS ---------------------------------------------------------------------------------
-  
+  lcd.clear();
+  dht.read(true);
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  Serial.println(F("Humedad: "));
+  Serial.println(humidity);
+
+  Serial.println("Temperatura: ");
+  Serial.println(temperature);
+  lcd.setCursor(0, 0);  // X, Y
+  lcd.print("Temp: ");
+  lcd.print(temperature);
+  lcd.write(0xDF);
+  lcd.print("C");
+  lcd.setCursor(0, 1);  // X, Y
+  lcd.print("Hum:  ");
+  lcd.print(humidity);
+  lcd.write('%');
+  send(msgTemp.set(temperature, 1));
+  send(msgHum.set(humidity, 1));
+}
+
+void controlInterruptoresLeds() {
+
   boolean buttonStatePasillo = digitalRead(interruptorPasillo);
 
   if (buttonStatePasillo == LOW && lastButtonStatePasillo == HIGH) {
@@ -357,8 +334,6 @@ void loop()
     digitalWrite(ledPasillo1, ledStatePasillo);
     send(msgIntPasillo.set(ledStatePasillo));
     send(msgPasillo1.set(ledStatePasillo));
-    
- 
   }
   lastButtonStatePasillo = buttonStatePasillo;
 
@@ -372,7 +347,6 @@ void loop()
     send(msg.set(ledStateSalon1));
     send(msg2.set(ledStateSalon1));
     send(msgIntSalon.set(ledStateSalon1));
- 
   }
   lastButtonStateSalon = buttonStateSalon;
 
@@ -384,7 +358,6 @@ void loop()
     digitalWrite(ledGaraje, ledStateGaraje);
     send(msg3.set(ledStateGaraje));
     send(msgIntGaraje.set(ledStateGaraje));
- 
   }
   lastButtonStateGaraje = buttonStateGaraje;
 
@@ -397,22 +370,40 @@ void loop()
     send(msgIntBath.set(ledStateBath));
   }
   lastButtonStateBath = buttonStateBath;
+}
 
-  //--------------------------------------------------------------------------------------------------------------------------------------------
+void sistemaLedStair() {
 
-  //----------------------------------------------------BUZZER---------------------------------------------------------------------------------
-  
+  bool irStair1 = digitalRead(infStair1);
+  bool irStair2 = digitalRead(infStair2);
+
+  if (!irStair1 || !irStair2) {
+
+    if (digitalRead(ledStair) == 0) {
+
+      ledStairState = true;
+      stairActivationTime = millis();
+      digitalWrite(ledStair, HIGH);
+      send(msgStair.set(ledStairState));
+    }
+  }
+
+  if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) {  // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
+    ledStairState = false;
+    digitalWrite(ledStair, LOW);
+    send(msgStair.set(ledStairState));
+  }
+}
+
+void sistemaAlarma() {
 
   bool ir_detected = digitalRead(INF_PIN);
   bool ir_detected2 = digitalRead(INF_PIN2);
-  
-  
-  if (!ir_detected || !ir_detected2  && !buzzer_active ) {
 
-    
+  if (!ir_detected || !ir_detected2 && !buzzer_active) {
 
-    if(alarmaState){
-      
+    if (alarmaState) {
+
       buzzer_active = true;
       buzzer_activation_time = millis();
       digitalWrite(BUZZER_PIN, HIGH);
@@ -425,79 +416,68 @@ void loop()
       lcd.print("Enviando datos...");
     }
   }
-  
-  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) { // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
+
+  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {  // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
     buzzer_active = false;
     digitalWrite(BUZZER_PIN, LOW);
     digitalWrite(ledAlarma, LOW);
     send(msgBuzzer.set(buzzer_active));
   }
+}
+
+void loop() {
+
+  unsigned long tiempo_actual = millis();
+
+  if (millis() % 60000 == 0) {
+    i++;
+
+    if (i % 2 == 0) {
+      sensorLDR();
+    } else {
+      sensorDHT11();
+    }
+  }
+
+  if (i == 3) {
+    i = 1;
+  }
+
+  //--------------------------------------------------------------------------------------------------------------------------------------------
+
+  //---------------------------------------------------- INTERRUPTORES LEDS ---------------------------------------------------------------------------------
+
+  controlInterruptoresLeds();
+
+  //--------------------------------------------------------------------------------------------------------------------------------------------
+
+  //----------------------------------------------------BUZZER---------------------------------------------------------------------------------
+
+  sistemaAlarma();
+
 
   //---------------------------------------------------- LED STAIR---------------------------------------------------------------------------------
 
-  bool irStair1 = digitalRead(infStair1);
-  bool irStair2 = digitalRead(infStair2);
 
-  if (!irStair1 || !irStair2) {
+  sistemaLedStair();
 
-    if (digitalRead(ledStair) == 0) {
-
-    ledStairState = true;
-    stairActivationTime = millis();
-    digitalWrite(ledStair, HIGH);
-    send(msgStair.set(ledStairState));
-
-      }
-    }
-
-    if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) { // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
-    ledStairState = false;
-    digitalWrite(ledStair, LOW);
-    send(msgStair.set(ledStairState));
-  }
-
-  
   //--------------------------------------------------------------------------------------------------------------------------------------------
 
-  
+
   //-------------------------------------------------- SENSOR TEMP+HUM + LCD -------------------------------------------------------------------------
 
 
-  
 
-  
+
+
 
   //--------------------------------------------------------------------------------------------------------------------------------------------
 
-
-
-
-  //-------------------------------------------------- SENSOR MQ2 -------------------------------------------------------------------------
-
-
-  
-
-  if (millis() % 6000000 == 0){
-        Serial.println(analogRead(pinAnalogMQ2));
-        send(msgMQ2.set(analogRead(pinAnalogMQ2)));
-        
-
-
-
-
-
-
-
-    }
-
-
-
-    //--------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
   // Comprobación del estado del LED
-    
+
   bool newStateLedSalon1 = digitalRead(ledSalon1);
   if (newStateLedSalon1 != ledStateSalon1) {
     ledStateSalon1 = newStateLedSalon1;
@@ -527,166 +507,146 @@ void loop()
     ledStatePasillo = newStateLedPasillo1;
     send(msgPasillo1.set(ledStatePasillo));
   }
-
-  
-
-  
-
 }
 
 
 void receive(const MyMessage &message) {
 
 
-  if (message.getSensor()==CHILD_ID_RGB && message.type == V_RGB) {
+  if (message.getSensor() == CHILD_ID_RGB && message.type == V_RGB) {
 
-   String hexa = message.getString(); 
-   long n = (long) strtol( &hexa[0], NULL, 16);
-   RGB_values[0] = n >> 16;
-   RGB_values[1] = n >> 8 & 0xFF;
-   RGB_values[2] = n & 0xFF;
- }
- if (message.getSensor()==CHILD_ID_RGB && message.type == V_PERCENTAGE) {
-   valor = message.getInt();
-   analogWrite(redpin, int(RGB_values[0] * (valor / 100)));
-   analogWrite(greenpin, int(RGB_values[1] * (valor / 100)));
-   analogWrite(bluepin, int(RGB_values[2] * (valor / 100)));
- }
+    String hexa = message.getString();
+    long n = (long)strtol(&hexa[0], NULL, 16);
+    RGB_values[0] = n >> 16;
+    RGB_values[1] = n >> 8 & 0xFF;
+    RGB_values[2] = n & 0xFF;
+  }
+  if (message.getSensor() == CHILD_ID_RGB && message.type == V_PERCENTAGE) {
+    valor = message.getInt();
+    analogWrite(redpin, int(RGB_values[0] * (valor / 100)));
+    analogWrite(greenpin, int(RGB_values[1] * (valor / 100)));
+    analogWrite(bluepin, int(RGB_values[2] * (valor / 100)));
+  }
 
- if (message.getSensor()==CHILD_ID_RGB && message.type == V_LIGHT) {
-   if (message.getInt() == 0) {
-     digitalWrite(redpin, 0);
-     digitalWrite(greenpin, 0);
-     digitalWrite(bluepin, 0);
-     
+  if (message.getSensor() == CHILD_ID_RGB && message.type == V_LIGHT) {
+    if (message.getInt() == 0) {
+      digitalWrite(redpin, 0);
+      digitalWrite(greenpin, 0);
+      digitalWrite(bluepin, 0);
+    }
+    if (message.getInt() == 1) {
+      analogWrite(redpin, int(RGB_values[0] * (valor / 100)));
+      analogWrite(greenpin, int(RGB_values[1] * (valor / 100)));
+      analogWrite(bluepin, int(RGB_values[2] * (valor / 100)));
+    }
+  }
 
-   }
-   if (message.getInt() == 1) {
-     analogWrite(redpin, int(RGB_values[0] * (valor / 100)));
-     analogWrite(greenpin, int(RGB_values[1] * (valor / 100)));
-     analogWrite(bluepin, int(RGB_values[2] * (valor / 100)));
-   }
- }
-  
 
-  if (message.getSensor()==CHILD_ID_LED_SALON1 && message.type == V_STATUS) {
-    
-    digitalWrite(ledSalon1, message.getBool()?HIGH:LOW);
-  } 
+  if (message.getSensor() == CHILD_ID_LED_SALON1 && message.type == V_STATUS) {
 
-  if (message.getSensor()==CHILD_ID_LED_BATH && message.type == V_STATUS) {
-    
-    digitalWrite(ledBath, message.getBool()?HIGH:LOW);
-  } 
+    digitalWrite(ledSalon1, message.getBool() ? HIGH : LOW);
+  }
 
-  if (message.getSensor()==CHILD_ID_ALARMA && message.type == V_STATUS) {
-    
-    if(message.getBool()) {
+  if (message.getSensor() == CHILD_ID_LED_BATH && message.type == V_STATUS) {
+
+    digitalWrite(ledBath, message.getBool() ? HIGH : LOW);
+  }
+
+  if (message.getSensor() == CHILD_ID_ALARMA && message.type == V_STATUS) {
+
+    if (message.getBool()) {
       alarmaState = true;
-    }else {
+    } else {
       alarmaState = false;
     }
-  } 
+  }
 
-  if (message.getSensor()==CHILD_ID_LED_GARAJE && message.type == V_STATUS) {
-    
-    digitalWrite(ledGaraje, message.getBool()?HIGH:LOW);
-  } 
-  
-  if (message.getSensor()==CHILD_ID_SALON && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_LED_GARAJE && message.type == V_STATUS) {
+
+    digitalWrite(ledGaraje, message.getBool() ? HIGH : LOW);
+  }
+
+  if (message.getSensor() == CHILD_ID_SALON && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateSalon = message.getBool();
     digitalWrite(ledSalon1, lastButtonStateSalon ? HIGH : LOW);
     digitalWrite(ledSalon2, lastButtonStateSalon ? HIGH : LOW);
-  
   }
 
-   if (message.getSensor()==CHILD_ID_PASILLO && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_PASILLO && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStatePasillo = message.getBool();
     digitalWrite(ledPasillo1, lastButtonStatePasillo ? HIGH : LOW);
-  
   }
 
-  if (message.getSensor()==CHILD_ID_ASCENSOR && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_ASCENSOR && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
-    
-    if (message.getBool() == 1){
 
-      
+    if (message.getBool() == 1) {
+
+
       myStepper.step(stepsPerRevolution * 8.5);
-      
-      } else if (message.getBool() == 0){
-       
-        myStepper.step(-stepsPerRevolution * 8.5);
-        
 
-        }
+    } else if (message.getBool() == 0) {
+
+      myStepper.step(-stepsPerRevolution * 8.5);
+    }
   }
 
 
-  if (message.getSensor()==CHILD_ID_PUERTA1 && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_PUERTA1 && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
-    
-    if (message.getBool() == 1){
+
+    if (message.getBool() == 1) {
 
       servo1.write(1);
 
-      } else if (message.getBool() == 0){
+    } else if (message.getBool() == 0) {
 
-        servo1.write(90);
-
-        }
+      servo1.write(90);
+    }
   }
 
-   if (message.getSensor()==CHILD_ID_PUERTA2 && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_PUERTA2 && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
-    
-    if (message.getBool() == 1){
+
+    if (message.getBool() == 1) {
 
       servo2.write(1);
 
-      } else if (message.getBool() == 0){
+    } else if (message.getBool() == 0) {
 
-        servo2.write(90);
-
-        }
+      servo2.write(90);
+    }
   }
 
-  if (message.getSensor()==CHILD_ID_PUERTA_GARAJE && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_PUERTA_GARAJE && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
-    
-    if (message.getBool() == 1){
+
+    if (message.getBool() == 1) {
 
       servoGaraje.write(10);
 
-      } else if (message.getBool() == 0){
+    } else if (message.getBool() == 0) {
 
-        servoGaraje.write(90);
-
-        }
+      servoGaraje.write(90);
+    }
   }
 
-  if (message.getSensor()==CHILD_ID_GARAJE && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_GARAJE && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateSalon = message.getBool();
     digitalWrite(ledGaraje, lastButtonStateSalon ? HIGH : LOW);
   }
 
-  if (message.getSensor()==CHILD_ID_BATH && message.type == V_STATUS) {
+  if (message.getSensor() == CHILD_ID_BATH && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateBath = message.getBool();
     digitalWrite(ledBath, lastButtonStateBath ? HIGH : LOW);
   }
 
-   if (message.getSensor()==CHILD_ID_LED_SALON2 && message.getType()== V_STATUS) {
-     
-    digitalWrite(ledSalon2, message.getBool()?HIGH:LOW);
-     
-     
-     
-   } 
-} 
+  if (message.getSensor() == CHILD_ID_LED_SALON2 && message.getType() == V_STATUS) {
 
-
-
+    digitalWrite(ledSalon2, message.getBool() ? HIGH : LOW);
+  }
+}
