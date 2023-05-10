@@ -106,6 +106,9 @@ boolean lastButtonStatePasillo = LOW;
 boolean lastButtonStateGaraje = LOW;
 boolean lastButtonStateBath = LOW;
 
+bool mensajeLCD = false;
+unsigned long lcdTime = 0;
+
 bool alarmaState = false;
 bool buzzer_active = false;
 unsigned long buzzer_activation_time = 0;
@@ -153,6 +156,17 @@ Servo servoPuertaDormitorio;
 Servo servoPuertaGaraje;
 
 int i = 1;
+
+unsigned long tiempoInicioFuncion1 = 0;
+unsigned long tiempoInicioFuncion2 = 0;
+unsigned long duracionFuncion1 = 120000; // 2 minutos en milisegundos
+unsigned long duracionFuncion2 = 10000; // 10 segundos en milisegundos
+bool funcion1Activa = false;
+
+unsigned long startTime;                   // Tiempo en el que se inició la cuenta atrás
+const unsigned int countdownTime = 15000;  // 15 segundos en milisegundos
+bool cuentaAtras = false;
+
 
 void presentation() {
 
@@ -234,6 +248,7 @@ void setup() {
 
 void sensorLDR() {
 
+
   if (analogRead(photocellPin) < threshold) {  // Si el valor leído por el sensor LDR es menor al umbral establecido
 
     //Convertir el valor leído por el sensor LDR en el pin A1 a un valor de 0 a 100
@@ -254,6 +269,7 @@ void sensorLDR() {
     lcd.write('%');
     lcd.setCursor(0, 1);
     lcd.print("Leds >> ON");
+
 
   } else {
 
@@ -312,7 +328,7 @@ void controlInterruptoresLeds() {
   boolean buttonStatePasillo = digitalRead(interruptorPasillo);
 
   if (buttonStatePasillo == LOW && lastButtonStatePasillo == HIGH) {
-    
+
     ledStatePasillo = !ledStatePasillo;
     digitalWrite(ledPasillo, ledStatePasillo);
 
@@ -342,7 +358,7 @@ void controlInterruptoresLeds() {
   boolean buttonStateGaraje = digitalRead(interruptorGaraje);
 
   if (buttonStateGaraje == LOW && lastButtonStateGaraje == HIGH) {
-  
+
     ledStateGaraje = !ledStateGaraje;
     digitalWrite(ledGaraje, ledStateGaraje);
 
@@ -367,6 +383,8 @@ void controlInterruptoresLeds() {
   lastButtonStateBath = buttonStateBath;
 }
 
+
+
 void sistemaLedStair() {
 
   //Lectura del estado de los sensores IR infStair
@@ -384,16 +402,42 @@ void sistemaLedStair() {
 
       digitalWrite(ledStair, HIGH);
       send(msgStair.set(ledStairState));
+
+      lcd.clear();
+      lcd.setCursor(0, 0);  // X, Y
+      lcd.print("Led Escalera: ");
+      lcd.setCursor(0, 1);  // X, Y
+      lcd.print("Encendida");
     }
   }
 
   // se compara el tiempo transcurrido desde que se encendio ledStair (millis() - stairActivationTime) con la variable ledStairDuration definida anteriormente
-  if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) {  
+  if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) {
 
     ledStairState = false;
     digitalWrite(ledStair, LOW);
     send(msgStair.set(ledStairState));
+
+    lcdTemperature();
   }
+}
+
+void lcdTemperature() {
+
+  lcd.clear();
+
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  lcd.setCursor(0, 0);  // X, Y
+  lcd.print("Temp: ");
+  lcd.print(temperature);
+  lcd.write(0xDF);
+  lcd.print("C");
+  lcd.setCursor(0, 1);  // X, Y
+  lcd.print("Hum:  ");
+  lcd.print(humidity);
+  lcd.write('%');
 }
 
 void sistemaAlarma() {
@@ -428,31 +472,32 @@ void sistemaAlarma() {
   // se compara el tiempo transcurrido desde que se activa Buzzer (millis() - buzzer_activation_time) con la variable buzzer_duration definida anteriormente
   if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {  // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
 
-    //Cambio estado Buzzer   
+    //Cambio estado Buzzer
     buzzer_active = false;
 
     digitalWrite(BUZZER_PIN, LOW);
     digitalWrite(ledAlarma, LOW);
     send(msgBuzzer.set(buzzer_active));
+    lcdTemperature();
   }
 }
 
 void loop() {
 
-  unsigned long tiempo_actual = millis();
-
-  if (millis() % 60000 == 0) {
-    i++;
-
-    if (i % 2 == 0) {
-      sensorLDR();
-    } else {
-      sensorDHT11();
-    }
+  unsigned long tiempoActual = millis();
+  
+  if (funcion1Activa && tiempoActual - tiempoInicioFuncion1 >= duracionFuncion1) {
+    // Si se está ejecutando la función 1 y ha pasado el tiempo necesario, desactiva la función 1 y activa la función 2
+    funcion1Activa = false;
+    tiempoInicioFuncion2 = tiempoActual;
+    sensorDHT11();
   }
-
-  if (i == 3) {
-    i = 1;
+  
+  if (!funcion1Activa && tiempoActual - tiempoInicioFuncion2 >= duracionFuncion2) {
+    // Si no se está ejecutando la función 1 y ha pasado el tiempo necesario, activa la función 1
+    funcion1Activa = true;
+    tiempoInicioFuncion1 = tiempoActual;
+    sensorLDR();
   }
 
   controlInterruptoresLeds();
@@ -633,7 +678,8 @@ void receive(const MyMessage &message) {
 
     } else if (message.getBool() == 0) {
 
-      servoPuertaGaraje.write(90);
+      servoPuertaGaraje.write(100);
+      
     }
   }
 
@@ -648,5 +694,4 @@ void receive(const MyMessage &message) {
     lastButtonStateBath = message.getBool();
     digitalWrite(ledBath, lastButtonStateBath ? HIGH : LOW);
   }
-
 }
