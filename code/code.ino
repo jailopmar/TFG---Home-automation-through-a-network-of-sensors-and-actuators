@@ -109,6 +109,12 @@ boolean lastButtonStateBath = LOW;
 bool mensajeLCD = false;
 unsigned long lcdTime = 0;
 
+bool ascensorBajadaState = false;
+bool ascensorSubidaState = false;
+unsigned long ascensor_subida_activation_time = 0;
+unsigned long ascensor_bajada_activation_time = 0;
+unsigned long ascensor_duration = 20000;
+
 bool alarmaState = false;
 bool buzzer_active = false;
 unsigned long buzzer_activation_time = 0;
@@ -147,6 +153,9 @@ MyMessage msgIntPasillo(CHILD_ID_PASILLO, V_STATUS);
 MyMessage msgIndiceCalor(CHILD_ID_INDICECALOR, V_TEMP);
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
+float temperature;
+float humidity;
+float indiceCalor;
 
 long RGB_values[3] = { 0, 0, 0 };
 float valor;
@@ -155,18 +164,13 @@ Servo servoPuertaSalon;
 Servo servoPuertaDormitorio;
 Servo servoPuertaGaraje;
 
-int i = 1;
-
 unsigned long tiempoInicioFuncion1 = 0;
 unsigned long tiempoInicioFuncion2 = 0;
-unsigned long duracionFuncion1 = 120000; // 2 minutos en milisegundos
-unsigned long duracionFuncion2 = 10000; // 10 segundos en milisegundos
+unsigned long duracionFuncion1 = 120000;  // 2 minutos en milisegundos
+unsigned long duracionFuncion2 = 10000;   // 10 segundos en milisegundos
 bool funcion1Activa = false;
 
-unsigned long startTime;                   // Tiempo en el que se inició la cuenta atrás
-const unsigned int countdownTime = 15000;  // 15 segundos en milisegundos
-bool cuentaAtras = false;
-
+bool noBloqueo = true;
 
 void presentation() {
 
@@ -203,48 +207,7 @@ void presentation() {
   request(CHILD_ID_RGB, V_LIGHT, "Estado RGB");
 }
 
-void setup() {
 
-  dht.begin();
-
-  servoPuertaSalon.attach(5);
-  servoPuertaDormitorio.attach(6);
-  servoPuertaGaraje.attach(7);
-
-  lcd.init();
-  lcd.backlight();
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Loading...");
-
-  pinMode(interruptorPasillo, INPUT_PULLUP);
-  pinMode(interruptorSalon, INPUT_PULLUP);
-  pinMode(interruptorGaraje, INPUT_PULLUP);
-  pinMode(interruptorBath, INPUT_PULLUP);
-  pinMode(interruptorPuertaSalon, INPUT_PULLUP);
-  pinMode(interruptorPuertaDormitorio, INPUT_PULLUP);
-  pinMode(interruptorPuertaGaraje, INPUT_PULLUP);
-  pinMode(StepAscensor, INPUT_PULLUP);
-  pinMode(ledSalon1, OUTPUT);
-  pinMode(ledSalon2, OUTPUT);
-  pinMode(ledPasillo, OUTPUT);
-  pinMode(ledGaraje, OUTPUT);
-  pinMode(ledAlarma, OUTPUT);
-  pinMode(ledBath, OUTPUT);
-  pinMode(ledStair, OUTPUT);
-  pinMode(ledExterior1, OUTPUT);
-  pinMode(ledExterior2, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(redPin, OUTPUT);
-  pinMode(greenPin, OUTPUT);
-  pinMode(bluePin, OUTPUT);
-
-  myStepper.setSpeed(10);  //Velocidad StepMotor
-
-  servoPuertaSalon.write(1);
-  servoPuertaDormitorio.write(1);
-  servoPuertaGaraje.write(10);
-}
 
 void sensorLDR() {
 
@@ -298,9 +261,9 @@ void sensorDHT11() {
   lcd.clear();
 
   //Lectura datos del sensor DHT11
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
-  float indiceCalor = dht.computeHeatIndex(temperature, humidity, false);
+  temperature = dht.readTemperature();
+  humidity = dht.readHumidity();
+  indiceCalor = dht.computeHeatIndex(temperature, humidity, false);
 
   Serial.println(F("Humedad: "));
   Serial.println(humidity);
@@ -323,65 +286,6 @@ void sensorDHT11() {
   send(msgIndiceCalor.set(indiceCalor, 1));
 }
 
-void controlInterruptoresLeds() {
-
-  boolean buttonStatePasillo = digitalRead(interruptorPasillo);
-
-  if (buttonStatePasillo == LOW && lastButtonStatePasillo == HIGH) {
-
-    ledStatePasillo = !ledStatePasillo;
-    digitalWrite(ledPasillo, ledStatePasillo);
-
-    //Envío de datos
-    send(msgIntPasillo.set(ledStatePasillo));
-    send(msgPasillo1.set(ledStatePasillo));
-  }
-
-  lastButtonStatePasillo = buttonStatePasillo;
-
-  boolean buttonStateSalon = digitalRead(interruptorSalon);
-
-  if (buttonStateSalon == LOW && lastButtonStateSalon == HIGH) {
-
-    ledStateSalon1 = !ledStateSalon1;
-    digitalWrite(ledSalon1, ledStateSalon1);
-    digitalWrite(ledSalon2, ledStateSalon1);
-
-    //Envío de datos
-    send(msgLedSalon1.set(ledStateSalon1));
-    send(msgLedSalon2.set(ledStateSalon1));
-    send(msgIntSalon.set(ledStateSalon1));
-  }
-
-  lastButtonStateSalon = buttonStateSalon;
-
-  boolean buttonStateGaraje = digitalRead(interruptorGaraje);
-
-  if (buttonStateGaraje == LOW && lastButtonStateGaraje == HIGH) {
-
-    ledStateGaraje = !ledStateGaraje;
-    digitalWrite(ledGaraje, ledStateGaraje);
-
-    //Envío de datos
-    send(msgLedGaraje.set(ledStateGaraje));
-    send(msgIntGaraje.set(ledStateGaraje));
-  }
-
-  lastButtonStateGaraje = buttonStateGaraje;
-
-  boolean buttonStateBath = digitalRead(interruptorBath);
-
-  if (buttonStateBath == LOW && lastButtonStateBath == HIGH) {
-    ledStateBath = !ledStateBath;
-    digitalWrite(ledBath, ledStateBath);
-
-    //Envío de datos
-    send(msgBath.set(ledStateBath));
-    send(msgIntBath.set(ledStateBath));
-  }
-
-  lastButtonStateBath = buttonStateBath;
-}
 
 
 
@@ -408,6 +312,8 @@ void sistemaLedStair() {
       lcd.print("Led Escalera: ");
       lcd.setCursor(0, 1);  // X, Y
       lcd.print("Encendida");
+
+      noBloqueo = false;
     }
   }
 
@@ -417,18 +323,13 @@ void sistemaLedStair() {
     ledStairState = false;
     digitalWrite(ledStair, LOW);
     send(msgStair.set(ledStairState));
-
-    lcdTemperature();
+    lcdTempHum();
   }
 }
 
-void lcdTemperature() {
+void lcdTempHum() {
 
   lcd.clear();
-
-  float temperature = dht.readTemperature();
-  float humidity = dht.readHumidity();
-
   lcd.setCursor(0, 0);  // X, Y
   lcd.print("Temp: ");
   lcd.print(temperature);
@@ -438,6 +339,35 @@ void lcdTemperature() {
   lcd.print("Hum:  ");
   lcd.print(humidity);
   lcd.write('%');
+
+  noBloqueo = true;
+}
+
+void ascensorLCD(){
+
+  if(ascensorSubidaState){
+
+    ascensor_subida_activation_time = millis();
+
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Ascensor ");
+    lcd.setCursor(0,1);
+    lcd.print("Subiendo.. ");
+  }
+
+  if(ascensorBajadaState){
+
+    ascensor_bajada_activation_time = millis();
+
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Ascensor ");
+    lcd.setCursor(0,1);
+    lcd.print("Bajando.. ");
+  }
+
+
 }
 
 void sistemaAlarma() {
@@ -478,29 +408,72 @@ void sistemaAlarma() {
     digitalWrite(BUZZER_PIN, LOW);
     digitalWrite(ledAlarma, LOW);
     send(msgBuzzer.set(buzzer_active));
-    lcdTemperature();
+    lcdTempHum();
   }
+}
+
+void setup() {
+
+  servoPuertaSalon.attach(5);
+  servoPuertaDormitorio.attach(6);
+  servoPuertaGaraje.attach(7);
+
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Loading...");
+
+  pinMode(interruptorPasillo, INPUT_PULLUP);
+  pinMode(interruptorSalon, INPUT_PULLUP);
+  pinMode(interruptorGaraje, INPUT_PULLUP);
+  pinMode(interruptorBath, INPUT_PULLUP);
+  pinMode(interruptorPuertaSalon, INPUT_PULLUP);
+  pinMode(interruptorPuertaDormitorio, INPUT_PULLUP);
+  pinMode(interruptorPuertaGaraje, INPUT_PULLUP);
+  pinMode(StepAscensor, INPUT_PULLUP);
+  pinMode(ledSalon1, OUTPUT);
+  pinMode(ledSalon2, OUTPUT);
+  pinMode(ledPasillo, OUTPUT);
+  pinMode(ledGaraje, OUTPUT);
+  pinMode(ledAlarma, OUTPUT);
+  pinMode(ledBath, OUTPUT);
+  pinMode(ledStair, OUTPUT);
+  pinMode(ledExterior1, OUTPUT);
+  pinMode(ledExterior2, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+
+  myStepper.setSpeed(10);  //Velocidad StepMotor
+
+  servoPuertaSalon.write(1);
+  servoPuertaDormitorio.write(1);
+  servoPuertaGaraje.write(10);
+
+  dht.begin();
+  sensorDHT11();
 }
 
 void loop() {
 
   unsigned long tiempoActual = millis();
-  
-  if (funcion1Activa && tiempoActual - tiempoInicioFuncion1 >= duracionFuncion1) {
+
+  if (funcion1Activa && tiempoActual - tiempoInicioFuncion1 >= duracionFuncion1 && noBloqueo) {
     // Si se está ejecutando la función 1 y ha pasado el tiempo necesario, desactiva la función 1 y activa la función 2
     funcion1Activa = false;
     tiempoInicioFuncion2 = tiempoActual;
-    sensorDHT11();
-  }
-  
-  if (!funcion1Activa && tiempoActual - tiempoInicioFuncion2 >= duracionFuncion2) {
-    // Si no se está ejecutando la función 1 y ha pasado el tiempo necesario, activa la función 1
-    funcion1Activa = true;
-    tiempoInicioFuncion1 = tiempoActual;
     sensorLDR();
   }
 
-  controlInterruptoresLeds();
+  if (!funcion1Activa && tiempoActual - tiempoInicioFuncion2 >= duracionFuncion2 && noBloqueo) {
+    // Si no se está ejecutando la función 1 y ha pasado el tiempo necesario, activa la función 1
+    funcion1Activa = true;
+    tiempoInicioFuncion1 = tiempoActual;
+    sensorDHT11();
+  }
+
   sistemaAlarma();
   sistemaLedStair();
 
@@ -517,6 +490,8 @@ void loop() {
     ledStateSalon2 = newStateLedSalon2;
     send(msgLedSalon2.set(ledStateSalon2));
   }
+
+  
 
   bool newStateLedGaraje = digitalRead(ledGaraje);
   if (newStateLedGaraje != ledStateGaraje) {
@@ -578,7 +553,7 @@ void receive(const MyMessage &message) {
     }
   }
 
-  /*
+
   if (message.getSensor() == CHILD_ID_LED_SALON1 && message.type == V_STATUS) {
 
     digitalWrite(ledSalon1, message.getBool() ? HIGH : LOW);
@@ -589,16 +564,7 @@ void receive(const MyMessage &message) {
     digitalWrite(ledSalon2, message.getBool() ? HIGH : LOW);
   }
 
-  if (message.getSensor() == CHILD_ID_LED_BATH && message.type == V_STATUS) {
 
-    digitalWrite(ledBath, message.getBool() ? HIGH : LOW);
-  }
-
-  if (message.getSensor() == CHILD_ID_LED_GARAJE && message.type == V_STATUS) {
-
-    digitalWrite(ledGaraje, message.getBool() ? HIGH : LOW);
-  }
-*/
 
   if (message.getSensor() == CHILD_ID_ALARMA && message.type == V_STATUS) {
 
@@ -620,6 +586,9 @@ void receive(const MyMessage &message) {
 
     digitalWrite(ledSalon1, lastButtonStateSalon ? HIGH : LOW);
     digitalWrite(ledSalon2, lastButtonStateSalon ? HIGH : LOW);
+
+    send(msgLedSalon1.set(lastButtonStateSalon));
+    send(msgLedSalon2.set(lastButtonStateSalon));
   }
 
   if (message.getSensor() == CHILD_ID_PASILLO && message.type == V_STATUS) {
@@ -627,18 +596,36 @@ void receive(const MyMessage &message) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStatePasillo = message.getBool();
     digitalWrite(ledPasillo, lastButtonStatePasillo ? HIGH : LOW);
-  }
+
+    send(msgPasillo1.set(lastButtonStatePasillo));
+  } 
 
   if (message.getSensor() == CHILD_ID_ASCENSOR && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
 
     if (message.getBool() == 1) {
 
+      ascensorSubidaState = true;
+
+      ascensorLCD();
+
       myStepper.step(stepsPerRevolution * 8.5);
+
+      ascensorSubidaState = false;
+
+      lcdTempHum();
 
     } else if (message.getBool() == 0) {
 
+      ascensorBajadaState = true;
+
+      ascensorLCD();
+
       myStepper.step(-stepsPerRevolution * 8.5);
+
+      ascensorBajadaState = false;
+
+      lcdTempHum();
     }
   }
 
@@ -679,19 +666,22 @@ void receive(const MyMessage &message) {
     } else if (message.getBool() == 0) {
 
       servoPuertaGaraje.write(100);
-      
     }
   }
 
   if (message.getSensor() == CHILD_ID_GARAJE && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
-    lastButtonStateSalon = message.getBool();
-    digitalWrite(ledGaraje, lastButtonStateSalon ? HIGH : LOW);
+    lastButtonStateGaraje = message.getBool();
+    digitalWrite(ledGaraje, lastButtonStateGaraje ? HIGH : LOW);
+
+    send(msgLedGaraje.set(lastButtonStateGaraje));
   }
 
   if (message.getSensor() == CHILD_ID_BATH && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateBath = message.getBool();
     digitalWrite(ledBath, lastButtonStateBath ? HIGH : LOW);
+
+    send(msgBath.set(lastButtonStateBath));
   }
 }
