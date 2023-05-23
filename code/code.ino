@@ -1,6 +1,5 @@
 #define MY_DEBUG
 
-// Enable and select radio type attached
 #define MY_RADIO_RF24
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 48
@@ -13,77 +12,90 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <Stepper.h>
+#include <MQUnifiedsensor.h>
 
-#define interruptorPasillo 39  // Interruptor de leds del pasillo
+#define MQ_PIN A14
+#define MQ_PIN_DIGITAL 13
+#define CHILD_ID_MQ2_DIGITAL 13
+#define CHILD_ID_MQ2_CO 61
+
+#define Board ("Arduino MEGA")
+#define Type ("MQ-2")  //MQ2
+#define Voltage_Resolution (5)
+#define ADC_Bit_Resolution (10)
+#define RatioMQ2CleanAir (9.83)
+
+MQUnifiedsensor MQ2(Board, Voltage_Resolution, ADC_Bit_Resolution, MQ_PIN, Type);
+
+#define interruptorPasillo 39  // Interruptor para led del pasillo
 #define CHILD_ID_PASILLO 39
 
-#define ledPasillo 40  //
+#define ledPasillo 40  // Led pasillo Pn
 #define CHILD_ID_LED_PASILLO 40
 
 #define interruptorPuertaGaraje 42  // Interruptor puerta Garaje
 #define CHILD_ID_PUERTA_GARAJE 42
 
-#define interruptorPuertaSalon 43  // Interruptor puerta 1
+#define interruptorPuertaSalon 43  // Interruptor puerta salón
 #define CHILD_ID_PUERTA_SALON 43
 
-#define interruptorPuertaDormitorio 44  // Interruptor puerta 2
+#define interruptorPuertaDormitorio 44  // Interruptor puerta dormitorio
 #define CHILD_ID_PUERTA_DORMITORIO 44
 
 #define CHILD_ID_LIGHT 51
 #define photocellPin A1
-int threshold = 200;  //Umbral LDR
 
 #define SENSOR_TEMP_OFFSET 0
 #define DHT_DATA_PIN 30  //DHT11 PIN
 #define DHTTYPE DHT11
 
-#define ledSalon1 29  //Led1 Pin
+#define ledSalon1 29  //Led Salon 1 Pin
 #define CHILD_ID_LED_SALON1 29
 
-#define ledSalon2 28  //Led2 Pin
+#define ledSalon2 28  //Led Salon 2 Pin
 #define CHILD_ID_LED_SALON2 28
 
-#define ledExterior1 47  //Led1 Jardin
+#define ledExterior1 47  //Led Exterior 1 Pin
 #define CHILD_ID_LED_EXTERIOR1 47
 
-#define ledExterior2 46  //Led1 Jardin
+#define ledExterior2 46  //Led Exterior 2 Pin
 #define CHILD_ID_LED_EXTERIOR2 46
 
-#define ledBath 26  //Led baño
+#define ledBath 26  //Led baño Pin
 #define CHILD_ID_LED_BATH 26
 
-#define ledAlarma 12  //led rojo de la alarma
+#define ledAlarma 12  //Led rojo Alarma
 
-#define ledStair 24  // Led escaleras
+#define ledStair 24  // Led escaleras pin
 #define CHILD_ID_LED_STAIR 24
 #define infStair1 23  // IR para led escaleras 1
 #define infStair2 22  // IR para led escaleras 2
 
-#define interruptorBath 25  // Interruptor del baño
+#define interruptorBath 25  // Interruptor para led Baño
 #define CHILD_ID_BATH 25
 
-#define ledGaraje 27  //Led Garaje
+#define ledGaraje 27  //Led Garaje Pin
 #define CHILD_ID_LED_GARAJE 27
 
 #define CHILD_ID_HUM 0
 #define CHILD_ID_TEMP 1
 #define CHILD_ID_INDICECALOR 38
 
-#define interruptorSalon 37  //Interruptor ledSalon1 + ledSalon2
+#define interruptorSalon 37  //Interruptor para  ledSalon1 + ledSalon2
 #define CHILD_ID_SALON 37
 
 #define interruptorGaraje 33  //Interruptor Luz Garaje
 #define CHILD_ID_GARAJE 33
 
-#define StepAscensor 35  //Interruptor Stepmotor
+#define StepAscensor 35  //Interruptor Motor de paso
 #define CHILD_ID_ASCENSOR 35
 
 #define BUZZER_PIN 32  //Buzzer Pin
 #define CHILD_ID_BUZZER 32
 
-#define INF_PIN2 45  // IR Alarma 2
-#define INF_PIN 34   // IR Alarma 21
-#define CHILD_ID_INF 34
+
+#define INF_PIN2 45  // IR Alarma 1
+#define INF_PIN 34   // IR Alarma 2
 
 #define CHILD_ID_ALARMA 36  //Interruptor activar/desactivar Alarma
 
@@ -92,13 +104,9 @@ int threshold = 200;  //Umbral LDR
 #define greenPin 4
 #define CHILD_ID_RGB 31
 
+//LCD I2C
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-bool ledStateSalon1 = false;
-bool ledStateSalon2 = false;
-bool ledStateGaraje = false;
-bool ledStateBath = false;
-bool ledStatePasillo = false;
 bool ledStairState = false;
 
 boolean lastButtonStateSalon = LOW;
@@ -106,14 +114,8 @@ boolean lastButtonStatePasillo = LOW;
 boolean lastButtonStateGaraje = LOW;
 boolean lastButtonStateBath = LOW;
 
-bool mensajeLCD = false;
-unsigned long lcdTime = 0;
-
 bool ascensorBajadaState = false;
 bool ascensorSubidaState = false;
-unsigned long ascensor_subida_activation_time = 0;
-unsigned long ascensor_bajada_activation_time = 0;
-unsigned long ascensor_duration = 20000;
 
 bool alarmaState = false;
 bool buzzer_active = false;
@@ -121,8 +123,9 @@ unsigned long buzzer_activation_time = 0;
 unsigned long buzzer_duration = 3000;  // Duración en milisegundos del Buzzer
 
 unsigned long stairActivationTime = 0;
-unsigned long ledStairDuration = 15000;  // DUración en milisegundos de la duración del ledStair encendido
+unsigned long ledStairDuration = 15000;  // Duración en milisegundos de la luz de la escalera
 
+//Configuración motor de paso
 const int stepsPerRevolution = 2048;
 Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);  // Pines motor de paso
 
@@ -151,6 +154,8 @@ MyMessage msgLedExterior2(CHILD_ID_LED_EXTERIOR2, V_LIGHT);
 MyMessage msgPasillo1(CHILD_ID_LED_PASILLO, V_LIGHT);
 MyMessage msgIntPasillo(CHILD_ID_PASILLO, V_STATUS);
 MyMessage msgIndiceCalor(CHILD_ID_INDICECALOR, V_TEMP);
+MyMessage msgMQ2CO(CHILD_ID_MQ2_CO, V_LEVEL);
+MyMessage msgMQ2Digital(CHILD_ID_MQ2_DIGITAL, V_STATUS);
 
 DHT dht(DHT_DATA_PIN, DHTTYPE);
 float temperature;
@@ -166,15 +171,22 @@ Servo servoPuertaGaraje;
 
 unsigned long tiempoInicioFuncion1 = 0;
 unsigned long tiempoInicioFuncion2 = 0;
-unsigned long duracionFuncion1 = 120000;  // 2 minutos en milisegundos
-unsigned long duracionFuncion2 = 10000;   // 10 segundos en milisegundos
-bool funcion1Activa = false;
-
+unsigned long tiempoInicioFuncion3 = 0;
+unsigned long duracionFuncion1 = 30000;  // 2 minutos en milisegundos
+unsigned long duracionFuncion2 = 10000;  // 10 segundos en milisegundos
+unsigned long duracionFuncion3 = 10000;
+bool funcion1Activa = true;   // Función 1 activa al inicio
+bool funcion2Activa = false;  // Función 2 inactiva al inicio
+bool funcion3Activa = false;  // Función 3 inactiva al inicio
 bool noBloqueo = true;
+
+float threshold = 204.8;  //Umbral LDR -> 20%
+float umbralGas = 1000;   //Umbral alarma Gas
+
 
 void presentation() {
 
-  sendSketchInfo("Casa Domótica TFG", "0.1");
+  sendSketchInfo("Casa Domótica TFG", "1.0");
 
   present(CHILD_ID_LED_SALON1, S_LIGHT, "Led Salon 1");
   present(CHILD_ID_LED_SALON2, S_LIGHT, "Led Salon 2");
@@ -201,18 +213,20 @@ void presentation() {
   present(CHILD_ID_LED_EXTERIOR2, S_LIGHT, "Led Exterior 2");
   present(CHILD_ID_LED_PASILLO, S_LIGHT, "Led Pasillo ");
   present(CHILD_ID_PASILLO, S_DOOR, "Interruptor Led Pasillo");
+  present(CHILD_ID_MQ2_CO, S_AIR_QUALITY, "Detector Gas");
+  present(CHILD_ID_MQ2_DIGITAL, S_BINARY, "Aviso Gas");
 
-  request(CHILD_ID_RGB, V_RGB, "Led RGB");
-  request(CHILD_ID_RGB, V_PERCENTAGE, "RGB Intensidad");
-  request(CHILD_ID_RGB, V_LIGHT, "Estado RGB");
+  request(CHILD_ID_RGB, V_RGB);
+  request(CHILD_ID_RGB, V_PERCENTAGE);
+  request(CHILD_ID_RGB, V_LIGHT);
 }
 
 
 
 void sensorLDR() {
 
-
-  if (analogRead(photocellPin) < threshold) {  // Si el valor leído por el sensor LDR es menor al umbral establecido
+  // Si el valor leído por el sensor LDR es menor al umbral establecido
+  if (analogRead(photocellPin) < threshold) {
 
     //Convertir el valor leído por el sensor LDR en el pin A1 a un valor de 0 a 100
     int percent1 = map(analogRead(photocellPin), 0, 1023, 0, 100);
@@ -317,7 +331,6 @@ void sistemaLedStair() {
     }
   }
 
-  // se compara el tiempo transcurrido desde que se encendio ledStair (millis() - stairActivationTime) con la variable ledStairDuration definida anteriormente
   if (ledStairState && (millis() - stairActivationTime) >= ledStairDuration) {
 
     ledStairState = false;
@@ -343,31 +356,54 @@ void lcdTempHum() {
   noBloqueo = true;
 }
 
-void ascensorLCD(){
+void ascensorLCD() {
 
-  if(ascensorSubidaState){
-
-    ascensor_subida_activation_time = millis();
+  if (ascensorSubidaState) {
 
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(0, 0);
     lcd.print("Ascensor ");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("Subiendo.. ");
   }
 
-  if(ascensorBajadaState){
-
-    ascensor_bajada_activation_time = millis();
+  if (ascensorBajadaState) {
 
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(0, 0);
     lcd.print("Ascensor ");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("Bajando.. ");
   }
+}
 
 
+void mq2Sensor() {
+
+  MQ2.update();
+  float valorGas = MQ2.readSensor();
+  send(msgMQ2CO.set(int(valorGas)));
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Gas: ");
+  lcd.setCursor(0, 1);
+  lcd.print(valorGas);
+  lcd.print(" ppm");
+
+  //Se activa la alarma de Gas si se activa el pin digital del MQ2 o se excede el umbral
+  if (digitalRead(MQ_PIN_DIGITAL) == LOW || valorGas > umbralGas) {
+
+    digitalWrite(BUZZER_PIN, HIGH);
+    digitalWrite(ledAlarma, HIGH);
+    send(msgMQ2Digital.set(1));
+
+  } else {
+
+    digitalWrite(BUZZER_PIN, LOW);
+    digitalWrite(ledAlarma, LOW);
+    send(msgMQ2Digital.set(0));
+  }
 }
 
 void sistemaAlarma() {
@@ -399,8 +435,7 @@ void sistemaAlarma() {
     }
   }
 
-  // se compara el tiempo transcurrido desde que se activa Buzzer (millis() - buzzer_activation_time) con la variable buzzer_duration definida anteriormente
-  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {  // se compara el tiempo transcurrido desde que se activó la alarma (millis() - buzzer_activation_time) con la duración del tiempo que se quiere que el buzzer esté activo (buzzer_duration).
+  if (buzzer_active && (millis() - buzzer_activation_time) >= buzzer_duration) {
 
     //Cambio estado Buzzer
     buzzer_active = false;
@@ -413,6 +448,47 @@ void sistemaAlarma() {
 }
 
 void setup() {
+
+  MQ2.setRegressionMethod(1);
+  MQ2.setA(36974);
+  MQ2.setB(-3.109);
+
+  /*
+    Exponential regression:
+    Gas    | a      | b
+    H2     | 987.99 | -2.162
+    LPG    | 574.25 | -2.222
+    CO     | 36974  | -3.109
+    Alcohol| 3616.1 | -2.675
+    Propane| 658.71 | -2.168
+  */
+
+  MQ2.init();
+
+  MQ2.setRL(20);
+
+  Serial.print("Calibrating please wait.");
+  float calcR0 = 0;
+  for (int i = 1; i <= 10; i++) {
+    MQ2.update();
+    calcR0 += MQ2.calibrate(RatioMQ2CleanAir);
+    Serial.print(".");
+  }
+  MQ2.setR0(calcR0 / 10);
+  Serial.println("  done!.");
+
+  if (isinf(calcR0)) {
+    Serial.println("Warning");
+    while (1)
+      ;
+  }
+  if (calcR0 == 0) {
+    Serial.println("Warning");
+    while (1)
+      ;
+  }
+
+  MQ2.serialDebug(true);
 
   servoPuertaSalon.attach(5);
   servoPuertaDormitorio.attach(6);
@@ -445,12 +521,15 @@ void setup() {
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
+  pinMode(MQ_PIN, INPUT);
+  pinMode(MQ_PIN_DIGITAL, INPUT);
 
   myStepper.setSpeed(10);  //Velocidad StepMotor
 
   servoPuertaSalon.write(1);
   servoPuertaDormitorio.write(1);
   servoPuertaGaraje.write(10);
+
 
   dht.begin();
   sensorDHT11();
@@ -461,14 +540,24 @@ void loop() {
   unsigned long tiempoActual = millis();
 
   if (funcion1Activa && tiempoActual - tiempoInicioFuncion1 >= duracionFuncion1 && noBloqueo) {
-    // Si se está ejecutando la función 1 y ha pasado el tiempo necesario, desactiva la función 1 y activa la función 2
+
     funcion1Activa = false;
+    funcion2Activa = true;
     tiempoInicioFuncion2 = tiempoActual;
     sensorLDR();
   }
 
-  if (!funcion1Activa && tiempoActual - tiempoInicioFuncion2 >= duracionFuncion2 && noBloqueo) {
-    // Si no se está ejecutando la función 1 y ha pasado el tiempo necesario, activa la función 1
+  if (funcion2Activa && tiempoActual - tiempoInicioFuncion2 >= duracionFuncion2 && noBloqueo) {
+
+    funcion2Activa = false;
+    funcion3Activa = true;
+    tiempoInicioFuncion3 = tiempoActual;
+    mq2Sensor();
+  }
+
+  if (funcion3Activa && tiempoActual - tiempoInicioFuncion3 >= duracionFuncion3 && noBloqueo) {
+
+    funcion3Activa = false;
     funcion1Activa = true;
     tiempoInicioFuncion1 = tiempoActual;
     sensorDHT11();
@@ -476,47 +565,15 @@ void loop() {
 
   sistemaAlarma();
   sistemaLedStair();
-
-  /*
-
-  bool newStateLedSalon1 = digitalRead(ledSalon1);
-  if (newStateLedSalon1 != ledStateSalon1) {
-    ledStateSalon1 = newStateLedSalon1;
-    send(msgLedSalon1.set(ledStateSalon1));
-  }
-
-  bool newStateLedSalon2 = digitalRead(ledSalon2);
-  if (newStateLedSalon2 != ledStateSalon2) {
-    ledStateSalon2 = newStateLedSalon2;
-    send(msgLedSalon2.set(ledStateSalon2));
-  }
-
-  
-
-  bool newStateLedGaraje = digitalRead(ledGaraje);
-  if (newStateLedGaraje != ledStateGaraje) {
-    ledStateGaraje = newStateLedGaraje;
-    send(msgLedGaraje.set(ledStateGaraje));
-  }
-
-  bool newStateLedBath = digitalRead(ledBath);
-  if (newStateLedBath != ledStateBath) {
-    ledStateBath = newStateLedBath;
-    send(msgBath.set(ledStateBath));
-  }
-
-  bool newStateLedPasillo = digitalRead(ledPasillo);
-  if (newStateLedPasillo != ledStatePasillo) {
-    ledStatePasillo = newStateLedPasillo;
-    send(msgPasillo1.set(ledStatePasillo));
-  }
-  */
 }
 
 
-void receive(const MyMessage &message) {
+void receive(const MyMessage& message) {
 
-
+  /*Procesar mensaje recibido por MySensors que contiene un valor RGB en 
+   formato hexadecimal y extrae los componentes de rojo, verde, azul
+   almacenandolos en RGB_values.
+  */
   if (message.getSensor() == CHILD_ID_RGB && message.type == V_RGB) {
 
     String hexa = message.getString();
@@ -527,6 +584,7 @@ void receive(const MyMessage &message) {
     RGB_values[2] = n & 0xFF;
   }
 
+  //Ajustar la intensidad de los componentes de color RGB, según el porcentaje recibido
   if (message.getSensor() == CHILD_ID_RGB && message.type == V_PERCENTAGE) {
 
     valor = message.getInt();
@@ -538,6 +596,7 @@ void receive(const MyMessage &message) {
 
   if (message.getSensor() == CHILD_ID_RGB && message.type == V_LIGHT) {
 
+    //Apagar led RGB
     if (message.getInt() == 0) {
 
       digitalWrite(redPin, 0);
@@ -553,17 +612,17 @@ void receive(const MyMessage &message) {
     }
   }
 
-
+  //Manejo Individual Led Salon 1
   if (message.getSensor() == CHILD_ID_LED_SALON1 && message.type == V_STATUS) {
 
     digitalWrite(ledSalon1, message.getBool() ? HIGH : LOW);
   }
 
+  //Manejo Individual Led Salon 2
   if (message.getSensor() == CHILD_ID_LED_SALON2 && message.getType() == V_STATUS) {
 
     digitalWrite(ledSalon2, message.getBool() ? HIGH : LOW);
   }
-
 
 
   if (message.getSensor() == CHILD_ID_ALARMA && message.type == V_STATUS) {
@@ -598,7 +657,7 @@ void receive(const MyMessage &message) {
     digitalWrite(ledPasillo, lastButtonStatePasillo ? HIGH : LOW);
 
     send(msgPasillo1.set(lastButtonStatePasillo));
-  } 
+  }
 
   if (message.getSensor() == CHILD_ID_ASCENSOR && message.type == V_STATUS) {
     // Cambiar el estado del LED si se recibe un mensaje del botón
@@ -609,6 +668,7 @@ void receive(const MyMessage &message) {
 
       ascensorLCD();
 
+      //Número de vueltas que da el motor de paso para llegar al piso 1
       myStepper.step(stepsPerRevolution * 8.5);
 
       ascensorSubidaState = false;
@@ -621,6 +681,7 @@ void receive(const MyMessage &message) {
 
       ascensorLCD();
 
+      //Número de vueltas en dirección contrario que da el motor de paso para llegar al piso 0
       myStepper.step(-stepsPerRevolution * 8.5);
 
       ascensorBajadaState = false;
@@ -631,12 +692,13 @@ void receive(const MyMessage &message) {
 
 
   if (message.getSensor() == CHILD_ID_PUERTA_SALON && message.type == V_STATUS) {
-    // Cambiar el estado del LED si se recibe un mensaje del botón
 
+    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
     if (message.getBool() == 1) {
 
       servoPuertaSalon.write(1);
 
+      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 90º
     } else if (message.getBool() == 0) {
 
       servoPuertaSalon.write(90);
@@ -644,12 +706,13 @@ void receive(const MyMessage &message) {
   }
 
   if (message.getSensor() == CHILD_ID_PUERTA_DORMITORIO && message.type == V_STATUS) {
-    // Cambiar el estado del LED si se recibe un mensaje del botón
 
+    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
     if (message.getBool() == 1) {
 
       servoPuertaDormitorio.write(1);
 
+      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 90º
     } else if (message.getBool() == 0) {
 
       servoPuertaDormitorio.write(90);
@@ -657,12 +720,13 @@ void receive(const MyMessage &message) {
   }
 
   if (message.getSensor() == CHILD_ID_PUERTA_GARAJE && message.type == V_STATUS) {
-    // Cambiar el estado del LED si se recibe un mensaje del botón
 
+    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
     if (message.getBool() == 1) {
 
       servoPuertaGaraje.write(10);
 
+      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 100º
     } else if (message.getBool() == 0) {
 
       servoPuertaGaraje.write(100);
@@ -670,6 +734,7 @@ void receive(const MyMessage &message) {
   }
 
   if (message.getSensor() == CHILD_ID_GARAJE && message.type == V_STATUS) {
+
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateGaraje = message.getBool();
     digitalWrite(ledGaraje, lastButtonStateGaraje ? HIGH : LOW);
@@ -677,7 +742,20 @@ void receive(const MyMessage &message) {
     send(msgLedGaraje.set(lastButtonStateGaraje));
   }
 
+  if (message.getSensor() == CHILD_ID_BUZZER && message.type == V_STATUS) {
+
+    digitalWrite(BUZZER_PIN, message.getBool() ? HIGH : LOW);
+    digitalWrite(ledAlarma, message.getBool() ? HIGH : LOW);
+  }
+
+  if (message.getSensor() == CHILD_ID_MQ2_DIGITAL && message.type == V_STATUS) {
+
+    digitalWrite(BUZZER_PIN, message.getBool() ? HIGH : LOW);
+    digitalWrite(ledAlarma, message.getBool() ? HIGH : LOW);
+  }
+
   if (message.getSensor() == CHILD_ID_BATH && message.type == V_STATUS) {
+
     // Cambiar el estado del LED si se recibe un mensaje del botón
     lastButtonStateBath = message.getBool();
     digitalWrite(ledBath, lastButtonStateBath ? HIGH : LOW);
