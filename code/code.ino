@@ -25,12 +25,13 @@
 #define ADC_Bit_Resolution (10)
 #define RatioMQ2CleanAir (9.83)
 
-MQUnifiedsensor MQ2(Board, Voltage_Resolution, ADC_Bit_Resolution, MQ_PIN, Type);
+MQUnifiedsensor MQ2(Board, Voltage_Resolution, ADC_Bit_Resolution,
+                    MQ_PIN, Type);
 
 #define interruptorPasillo 39  // Interruptor para led del pasillo
 #define CHILD_ID_PASILLO 39
 
-#define ledPasillo 40  // Led pasillo Pn
+#define ledPasillo 40  // Led pasillo Pin
 #define CHILD_ID_LED_PASILLO 40
 
 #define interruptorPuertaGaraje 42  // Interruptor puerta Garaje
@@ -120,14 +121,18 @@ bool ascensorSubidaState = false;
 bool alarmaState = false;
 bool buzzer_active = false;
 unsigned long buzzer_activation_time = 0;
-unsigned long buzzer_duration = 3000;  // Duración en milisegundos del Buzzer
+
+// Duración en milisegundos del Buzzer
+unsigned long buzzer_duration = 10000;
 
 unsigned long stairActivationTime = 0;
-unsigned long ledStairDuration = 15000;  // Duración en milisegundos de la luz de la escalera
+
+// Duración en milisegundos de la luz de la escalera
+unsigned long ledStairDuration = 15000;
 
 //Configuración motor de paso
 const int stepsPerRevolution = 2048;
-Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);  // Pines motor de paso
+Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
 
 MyMessage msgLedSalon1(CHILD_ID_LED_SALON1, V_LIGHT);
 MyMessage msgLedSalon2(CHILD_ID_LED_SALON2, V_LIGHT);
@@ -200,7 +205,7 @@ void presentation() {
   present(CHILD_ID_ALARMA, S_DOOR, "Interruptor Alarma");
   present(CHILD_ID_ASCENSOR, S_DOOR, "Ascensor");
   present(CHILD_ID_RGB, S_RGB_LIGHT, "RGB Led");
-  present(CHILD_ID_RGB, S_DIMMER, "RGB Intendidad");
+  present(CHILD_ID_RGB, S_DIMMER, "RGB Intensidad");
   present(CHILD_ID_RGB, S_LIGHT, "Estado RGB");
   present(CHILD_ID_BATH, S_DOOR, "Interruptor Led Baño");
   present(CHILD_ID_LED_BATH, S_LIGHT, "Led Baño");
@@ -693,43 +698,58 @@ void receive(const MyMessage& message) {
 
   if (message.getSensor() == CHILD_ID_PUERTA_SALON && message.type == V_STATUS) {
 
-    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
     if (message.getBool() == 1) {
 
-      servoPuertaSalon.write(1);
+      for (int j = 90; j > 0; j--) {
+        servoPuertaSalon.write(j);
+        delay(20);
+      }
 
-      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 90º
+
     } else if (message.getBool() == 0) {
 
-      servoPuertaSalon.write(90);
+      for (int i = 0; i <= 90; i++) {
+        servoPuertaSalon.write(i);
+        delay(20);
+      }
     }
   }
 
   if (message.getSensor() == CHILD_ID_PUERTA_DORMITORIO && message.type == V_STATUS) {
 
-    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
+
     if (message.getBool() == 1) {
 
-      servoPuertaDormitorio.write(1);
+      for (int j = 90; j > 0; j--) {
+        servoPuertaDormitorio.write(j);
+        delay(20);
+      }
 
-      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 90º
+
     } else if (message.getBool() == 0) {
 
-      servoPuertaDormitorio.write(90);
+      for (int i = 0; i <= 90; i++) {
+        servoPuertaDormitorio.write(i);
+        delay(20);
+      }
     }
   }
 
   if (message.getSensor() == CHILD_ID_PUERTA_GARAJE && message.type == V_STATUS) {
 
-    //Si se recibe un 1, que será "Puerta Bloqueada" está se cerrará
     if (message.getBool() == 1) {
 
-      servoPuertaGaraje.write(10);
+      for (int j = 100; j > 0; j--) {
+        servoPuertaGaraje.write(j);
+        delay(20);
+      }
 
-      //Si se recibe un 0, que será "Puerta Abierta" está se abrirá 100º
     } else if (message.getBool() == 0) {
 
-      servoPuertaGaraje.write(100);
+      for (int i = 0; i <= 100; i++) {
+        servoPuertaGaraje.write(i);
+        delay(20);
+      }
     }
   }
 
